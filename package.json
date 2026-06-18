@@ -7,10 +7,13 @@
     "dev": "astro dev",
     "build": "astro build && pagefind",
     "build:fast": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "npm run build && wrangler dev",
+    "astro": "astro",
+    "generate-types": "wrangler types",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^13.7.0",
     "@astrojs/mdx": "^6.0.3",
     "@astrojs/rss": "^4.0.18",
     "@astrojs/sitemap": "^3.7.3",
@@ -30,6 +33,10 @@
   },
   "devDependencies": {
     "gray-matter": "^4.0.3",
-    "pagefind": "^1.5.2"
+    "pagefind": "^1.5.2",
+    "wrangler": "^4.102.0"
+  },
+  "overrides": {
+    "vite": "^7"
   }
 }

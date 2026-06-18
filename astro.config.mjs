@@ -7,12 +7,15 @@ import rehypeCallouts from 'rehype-callouts';
 import remarkDirective from 'remark-directive';
 import remarkLegacyDirectives from './src/plugins/remark-legacy-directives.mjs';
 
+import cloudflare from '@astrojs/cloudflare';
+
 // 部署：Cloudflare Pages / Vercel，自定义域名（D-8）。绑定域名后把 site 改成正式域名。
 // 根域名部署 → base: '/'（无 GitHub Pages 的 /newblog 前缀）。
 export default defineConfig({
   site: 'https://runebyte.pages.dev',
   base: '/',
   integrations: [mdx(), sitemap(), icon()],
+
   markdown: {
     shikiConfig: {
       theme: 'github-dark',
@@ -39,4 +42,6 @@ export default defineConfig({
       ],
     ],
   },
+
+  adapter: cloudflare(),
 });
