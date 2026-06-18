@@ -1,0 +1,36 @@
+---
+// 渐进式内容呈现（克制版）：正文 代码块/引用/图表 进视口轻淡入；图片 blur-up（载入完变清晰）。
+// reduced-motion 下完全跳过；不启用 JS 时内容正常显示（不隐藏），不影响 SEO。
+---
+<script>
+  function initReveal() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const prose = document.querySelector('.prose');
+    if (!prose) return;
+
+    // 1) 块级元素进视口淡入（不含 img，img 走 blur-up）
+    const targets = prose.querySelectorAll<HTMLElement>('pre, blockquote, figure, table');
+    targets.forEach((el) => el.classList.add('reveal'));
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-in');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    targets.forEach((el) => io.observe(el));
+
+    // 2) 图片 blur-up
+    prose.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+      img.classList.add('blur-load');
+      const mark = () => img.classList.add('loaded');
+      if (img.complete && img.naturalWidth > 0) mark();
+      else img.addEventListener('load', mark, { once: true });
+    });
+  }
+  document.addEventListener('astro:page-load', initReveal);
+</script>

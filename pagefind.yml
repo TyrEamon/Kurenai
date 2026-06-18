@@ -1,0 +1,6 @@
+# Pagefind 配置（codex T3）：构建后对 dist 建索引
+site: dist
+# 中英混合：用单一中文索引，避免“中文搜索页搜不到英文文章”
+force_language: zh
+exclude_selectors:
+  - "[data-pagefind-ignore]"

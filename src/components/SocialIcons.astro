@@ -1,0 +1,48 @@
+---
+import { Icon } from 'astro-icon/components';
+import { profile } from '../data/profile';
+interface Props {
+  size?: number;
+}
+const { size = 1.3 } = Astro.props;
+---
+
+<nav class="socials" aria-label="社交链接" style={`--size:${size}rem`}>
+  {
+    profile.socials.map((s) => (
+      <a
+        class="social"
+        href={s.url}
+        target={s.url.startsWith('http') ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        aria-label={s.label}
+        data-cursor
+        style={`--c:${s.color}`}
+      >
+        <Icon name={s.icon} />
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    align-items: center;
+  }
+  .social {
+    font-size: var(--size, 1.3rem);
+    line-height: 1;
+    color: var(--fg-faint);
+    transition: color 0.25s var(--ease), transform 0.25s var(--ease);
+  }
+  .social:hover {
+    color: var(--c);
+    transform: translateY(-3px);
+  }
+  .social :global(svg) {
+    display: block;
+  }
+</style>

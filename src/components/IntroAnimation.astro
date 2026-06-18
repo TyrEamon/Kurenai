@@ -1,0 +1,129 @@
+---
+// 入场仪式（D-11）：名字逐字浮现 → 双层幕布上扫揭幕（暗层带名字先走，红层紧跟 ~130ms，红只露约 1/3）。
+// 每次进首页都放，≤2.2s，可点击/滚动/按键跳过，reduced-motion 直接跳过。
+const name = 'RuneByte';
+const letters = name.split('');
+---
+
+<div class="intro" id="intro" role="presentation">
+  <div class="sweep sweep-red"></div>
+  <div class="sweep sweep-dark">
+    <div class="intro-name">
+      {letters.map((ch, i) => <span class="il" style={`--i:${i}`}>{ch}</span>)}
+      <span class="il dot" style={`--i:${letters.length}`}>.</span>
+    </div>
+    <span class="intro-skip">点击任意处跳过</span>
+  </div>
+</div>
+
+<style>
+  .intro {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    overflow: hidden;
+  }
+  .sweep {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+  .sweep-red {
+    background: var(--accent);
+    z-index: 1;
+  }
+  .sweep-dark {
+    background: var(--bg);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+  }
+  .intro-name {
+    display: flex;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.4rem, 11vw, 9rem);
+    letter-spacing: -0.04em;
+    color: var(--fg);
+  }
+  .il {
+    opacity: 0;
+    transform: translateY(0.5em);
+    display: inline-block;
+  }
+  .il.dot {
+    color: var(--accent);
+  }
+  .intro-skip {
+    position: absolute;
+    bottom: 2rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+</style>
+
+<script>
+  function playIntro() {
+    const intro = document.getElementById('intro');
+    if (!intro) return;
+    const remove = () => intro.remove();
+
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      remove();
+      return;
+    }
+
+    const dark = intro.querySelector<HTMLElement>('.sweep-dark')!;
+    const red = intro.querySelector<HTMLElement>('.sweep-red')!;
+    const letters = Array.from(intro.querySelectorAll<HTMLElement>('.il'));
+    const EASE = 'cubic-bezier(0.76,0,0.24,1)';
+    document.body.style.overflow = 'hidden';
+
+    // 1) 名字逐字浮现
+    letters.forEach((el, i) => {
+      el.animate(
+        [
+          { opacity: 0, transform: 'translateY(0.5em)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 460, delay: 80 + i * 42, easing: EASE, fill: 'forwards' },
+      );
+    });
+
+    // 2) 双层幕布上扫：暗层先走(带着名字)，红层紧跟 ~130ms，露约 1/3 红
+    const sweepAt = 80 + letters.length * 42 + 320;
+    const up = [{ transform: 'translateY(0)' }, { transform: 'translateY(-100%)' }];
+    dark.animate(up, { duration: 640, delay: sweepAt, easing: EASE, fill: 'forwards' });
+    const redAnim = red.animate(up, {
+      duration: 640,
+      delay: sweepAt + 130,
+      easing: EASE,
+      fill: 'forwards',
+    });
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      document.body.style.overflow = '';
+      remove();
+    };
+    redAnim.addEventListener('finish', finish);
+
+    const skip = () => {
+      intro.getAnimations({ subtree: true }).forEach((a) => a.finish());
+      finish();
+    };
+    intro.addEventListener('click', skip);
+    window.addEventListener('keydown', skip, { once: true });
+    window.addEventListener('wheel', skip, { once: true, passive: true });
+    setTimeout(finish, 2200);
+  }
+  document.addEventListener('astro:page-load', playIntro);
+</script>

@@ -1,0 +1,18 @@
+# build output
+dist/
+.astro/
+
+# deps
+node_modules/
+
+# 本地规划/协作工作区（不入公开仓库）
+claude-think/
+codex-think/
+.claude/
+
+# env & misc
+.env
+.env.production
+.DS_Store
+*.log
+.vscode/

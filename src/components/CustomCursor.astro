@@ -1,0 +1,69 @@
+---
+// 跟随式自定义光标（拖尾 lerp）。触摸/reduced-motion 下禁用。
+---
+<div class="cursor" aria-hidden="true"></div>
+
+<style>
+  .cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+    opacity: 0;
+    transition: width 0.25s var(--ease), height 0.25s var(--ease), opacity 0.3s;
+  }
+  .cursor.active {
+    width: 42px;
+    height: 42px;
+    background: var(--fg);
+  }
+  @media (pointer: coarse) {
+    .cursor {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  let raf = 0;
+  function initCursor() {
+    const el = document.querySelector<HTMLElement>('.cursor');
+    if (!el) return;
+    if (matchMedia('(pointer: coarse)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches)
+      return;
+
+    let tx = innerWidth / 2,
+      ty = innerHeight / 2,
+      x = tx,
+      y = ty;
+
+    const onMove = (e: PointerEvent) => {
+      tx = e.clientX;
+      ty = e.clientY;
+      el.style.opacity = '1';
+    };
+    window.addEventListener('pointermove', onMove);
+
+    document.addEventListener('pointerover', (e) => {
+      const t = e.target as HTMLElement;
+      el.classList.toggle('active', !!t.closest('a, button, [data-cursor]'));
+    });
+
+    cancelAnimationFrame(raf);
+    const loop = () => {
+      x += (tx - x) * 0.18;
+      y += (ty - y) * 0.18;
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+  document.addEventListener('astro:page-load', initCursor);
+</script>

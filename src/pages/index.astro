@@ -1,0 +1,345 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import IntroAnimation from '../components/IntroAnimation.astro';
+import PostCard from '../components/PostCard.astro';
+import SocialIcons from '../components/SocialIcons.astro';
+import { profile } from '../data/profile';
+import { getArticles, getPublishedPosts, getAllTags } from '../lib/posts';
+
+const articles = await getArticles();
+const all = await getPublishedPosts();
+const feed = articles;
+const stats = [
+  { label: '归档', value: all.length, href: 'archive/' },
+  { label: '分类', value: new Set(all.map((p) => p.data.category).filter(Boolean)).size, href: 'tags/' },
+  { label: '标签', value: getAllTags(all).length, href: 'tags/' },
+];
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="RuneByte · Tyr 的折腾与复盘" intro>
+  <IntroAnimation />
+
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">creative notes · 折腾 与 复盘</p>
+      <h1 class="hero-name">RuneByte<span class="dot">.</span></h1>
+      <p class="hero-tag">
+        我是 Tyr。在这里记录<span class="em-font">项目复盘</span>、技术折腾，与一些日常手记。
+      </p>
+      <a class="hero-cue" href="#enter" data-cursor>↓ scroll</a>
+    </div>
+  </section>
+
+  <div class="wrap" id="enter">
+    <div class="divider"></div>
+  </div>
+
+  <div class="home-main wrap">
+    <!-- 左：个人简介侧栏 -->
+    <aside class="profile-card" data-reveal>
+      <img class="pc-avatar" src={profile.avatar} alt={profile.name} width="84" height="84" />
+      <div class="pc-name">RuneByte<span class="dot">.</span></div>
+      <div class="pc-by">{profile.name} · 折腾与复盘</div>
+      <div class="pc-bio">
+        <p class="pc-bio-main">{profile.tagline}</p>
+        {profile.taglineSub.map((t) => <p>{t}</p>)}
+      </div>
+      <div class="pc-rule"></div>
+      <p class="pc-motto">{profile.motto}</p>
+      <div class="pc-stats">
+        {
+          stats.map((s) => (
+            <a class="pc-stat" href={`${base}${s.href}`} data-cursor>
+              <span class="sv">{s.value}</span>
+              <span class="sl">{s.label}</span>
+            </a>
+          ))
+        }
+      </div>
+      <div class="pc-social">
+        <SocialIcons size={1.35} />
+      </div>
+    </aside>
+
+    <!-- 右：文章流 -->
+    <div class="home-feed">
+      <div class="sec-head" data-reveal>
+        <p class="eyebrow">All · 全部文章</p>
+        <a class="more" href={`${base}blog/`} data-cursor>纯文本阅读 →</a>
+      </div>
+      <div class="list">
+        {
+          feed.map((post, i) => (
+            <div data-reveal style={`transition-delay:${Math.min(i, 6) * 45}ms`}>
+              <PostCard post={post} />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .hero {
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .divider {
+    border-top: 1px dashed var(--line-strong);
+    margin-bottom: 2.6rem;
+  }
+  .hero-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(3.4rem, 17vw, 13rem);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+    margin: 0.3em 0 0.25em;
+  }
+  .hero-name .dot {
+    color: var(--accent);
+  }
+  .hero-tag {
+    max-width: 34ch;
+    font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+    line-height: 1.5;
+    color: var(--fg-dim);
+  }
+  .hero-cue {
+    display: inline-block;
+    margin-top: 2.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: var(--fg-faint);
+    animation: bob 2s ease-in-out infinite;
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  /* 两栏 */
+  .home-main {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    padding-bottom: 4rem;
+  }
+  .profile-card {
+    position: sticky;
+    top: 6rem;
+    align-self: start;
+  }
+  .pc-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--line-strong);
+    margin: 0 0 1.1rem;
+  }
+  .pc-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: -0.02em;
+  }
+  .pc-name .dot {
+    color: var(--accent);
+  }
+  .pc-by {
+    font-size: 0.9rem;
+    color: var(--fg-dim);
+    margin-top: 0.25rem;
+  }
+  .pc-bio {
+    margin-top: 0.9rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+  .pc-bio-main {
+    font-family: var(--font-zh-display);
+    color: var(--fg);
+  }
+  .pc-bio p:last-child {
+    margin-top: 0.6rem;
+  }
+  .pc-rule {
+    border-top: 1px solid var(--line);
+    margin: 1rem 0 0.8rem;
+    max-width: 12rem;
+  }
+  .pc-motto {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--fg-faint);
+    letter-spacing: 0.02em;
+  }
+  .pc-stats {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1.6rem;
+    margin: 1.3rem 0;
+    padding: 1rem 0;
+    border-block: 1px solid var(--line);
+  }
+  .pc-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .pc-stat .sv {
+    font-family: var(--font-display);
+    font-size: 1.55rem;
+    color: var(--fg);
+    transition: color 0.2s;
+  }
+  .pc-stat:hover .sv {
+    color: var(--accent);
+  }
+  .pc-stat .sl {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--fg-faint);
+  }
+  .pc-social {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 0.8rem;
+  }
+  .home-feed .list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.5rem;
+  }
+  .more {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+  }
+  .more:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 860px) {
+    .home-main {
+      grid-template-columns: 1fr;
+    }
+    .profile-card {
+      position: static;
+    }
+  }
+</style>
+
+<script>
+  // 首屏 Hero → 渐入博客：向下滚动/点 ↓scroll/触屏上滑，都平滑「滑入」博客（与点击一致）；
+  // Hero 内容随滚动缓慢淡出上移，形成较慢的交叉渐变。正常页面、不锁。
+  let off: (() => void) | null = null;
+  function initHero() {
+    off?.();
+    off = null;
+    const inner = document.querySelector<HTMLElement>('.hero .wrap');
+    const target = document.getElementById('enter');
+    if (!inner) return;
+    const lenis = () => (window as any).lenis;
+
+    // 渐变（更慢：fade 拉到 0.85 屏高）
+    let ticking = false;
+    const update = () => {
+      const p = Math.min(1, window.scrollY / (innerHeight * 0.85));
+      inner.style.opacity = String(1 - p);
+      inner.style.transform = `translateY(${-p * 55}px)`;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    update();
+
+    // 一次向下滚动 = 平滑滑入博客（与点 ↓scroll 一致，慢一点）
+    let gliding = false;
+    const glide = () => {
+      if (gliding || !target) return;
+      const l = lenis();
+      if (!l) {
+        target.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      gliding = true;
+      l.stop(); // 滑入期间忽略滚轮输入，避免与 Lenis 自身滚动打架（抖动）
+      l.scrollTo(target, {
+        offset: -90,
+        duration: 1.8,
+        force: true,
+        onComplete: () => {
+          l.start();
+          gliding = false;
+        },
+      });
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (window.scrollY < 8 && e.deltaY > 0) {
+        e.preventDefault();
+        glide();
+      }
+    };
+    let ty = 0;
+    const onTS = (e: TouchEvent) => (ty = e.touches[0].clientY);
+    const onTM = (e: TouchEvent) => {
+      if (window.scrollY < 8 && ty - e.touches[0].clientY > 14) glide();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (window.scrollY < 8 && [' ', 'ArrowDown', 'PageDown'].includes(e.key)) {
+        e.preventDefault();
+        glide();
+      }
+    };
+    const cue = inner.querySelector<HTMLElement>('.hero-cue');
+    const onCue = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      glide();
+    };
+
+    addEventListener('wheel', onWheel, { passive: false });
+    addEventListener('touchstart', onTS, { passive: true });
+    addEventListener('touchmove', onTM, { passive: true });
+    addEventListener('keydown', onKey);
+    cue?.addEventListener('click', onCue);
+
+    off = () => {
+      removeEventListener('scroll', onScroll);
+      removeEventListener('wheel', onWheel);
+      removeEventListener('touchstart', onTS);
+      removeEventListener('touchmove', onTM);
+      removeEventListener('keydown', onKey);
+      cue?.removeEventListener('click', onCue);
+    };
+  }
+  document.addEventListener('astro:page-load', initHero);
+  document.addEventListener('astro:before-swap', () => {
+    off?.();
+    off = null;
+  });
+</script>

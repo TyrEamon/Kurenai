@@ -1,0 +1,47 @@
+---
+// 文章页顶部红色阅读进度条
+---
+<div class="reading-progress" aria-hidden="true"><span class="rp-bar"></span></div>
+
+<style>
+  .reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    z-index: 60;
+    background: transparent;
+  }
+  .rp-bar {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+</style>
+
+<script>
+  function initProgress() {
+    const bar = document.querySelector<HTMLElement>('.rp-bar');
+    if (!bar) return;
+    let ticking = false;
+    const update = () => {
+      const h = document.documentElement.scrollHeight - innerHeight;
+      const p = h > 0 ? Math.min(1, scrollY / h) : 0;
+      bar.style.transform = `scaleX(${p})`;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    update();
+  }
+  document.addEventListener('astro:page-load', initProgress);
+</script>

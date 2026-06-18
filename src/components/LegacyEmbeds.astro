@@ -1,0 +1,406 @@
+---
+// Legacy 兼容层运行时：增强 remark-legacy-directives 产出的结构。
+// 集中在这里（而非每个卡内联 <script>），以兼容 ClientRouter：每次 astro:page-load 重新增强。
+// - .gh-card[data-gh-repo]   客户端渐进 fetch GitHub API（失败保留静态卡）
+// - .music-card              原生 audio + Meting 取数 + 歌词
+// - .fv-player-root          Plyr + hls.js/dash.js（仅在页面存在播放器时从 CDN 加载）
+---
+
+<script>
+  // ---------------- GitHub 卡片：客户端渐进增强 ----------------
+  function initGithubCards() {
+    document.querySelectorAll<HTMLAnchorElement>('.gh-card[data-gh-repo]').forEach((card) => {
+      if (card.dataset.ghDone === '1') return;
+      card.dataset.ghDone = '1';
+      const repo = card.dataset.ghRepo!;
+      const fmt = (n: number) =>
+        Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n).replace(/ /g, '');
+      const set = (role: string, text: string) => {
+        const el = card.querySelector<HTMLElement>(`[data-role="${role}"]`);
+        if (!el) return;
+        const b = el.querySelector('b');
+        if (b) b.textContent = text;
+        else el.textContent = text;
+        el.hidden = false;
+      };
+      fetch(`https://api.github.com/repos/${repo}`, { referrerPolicy: 'no-referrer' })
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((d) => {
+          const desc = card.querySelector<HTMLElement>('[data-role="desc"]');
+          if (desc) desc.textContent = (d.description || '').replace(/:[a-zA-Z0-9_]+:/g, '').trim() || 'GitHub 仓库';
+          set('stars', fmt(d.stargazers_count ?? 0));
+          set('forks', fmt(d.forks ?? 0));
+          if (d.language) set('lang', d.language);
+          card.classList.add('gh-card--loaded');
+        })
+        .catch(() => {
+          card.classList.add('gh-card--error'); // 静态卡（owner/repo + 链接）仍可用
+        });
+    });
+  }
+
+  // ---------------- 音乐卡：原生 audio + Meting ----------------
+  function initMusicCards() {
+    document.querySelectorAll<HTMLElement>('.music-card').forEach((card) => {
+      if (card.dataset.init === '1') return;
+      card.dataset.init = '1';
+      const audio = card.querySelector<HTMLAudioElement>('.music-audio');
+      const playBtn = card.querySelector<HTMLButtonElement>('.music-play');
+      if (!audio || !playBtn) return;
+      const iPlay = playBtn.querySelector<HTMLElement>('.i-play');
+      const iPause = playBtn.querySelector<HTMLElement>('.i-pause');
+      const bar = card.querySelector<HTMLElement>('[data-role="bar"]');
+      const progress = card.querySelector<HTMLElement>('[data-role="progress"]');
+      const timeEl = card.querySelector<HTMLElement>('[data-role="time"]');
+      const curLyric = card.querySelector<HTMLElement>('.lyric-current');
+      const exitLyric = card.querySelector<HTMLElement>('.lyric-exit');
+      const titleEl = card.querySelector<HTMLElement>('.music-title');
+      const artistEl = card.querySelector<HTMLElement>('.music-artist');
+      const coverEl = card.querySelector<HTMLElement>('.music-cover');
+
+      const metingUrl = card.dataset.meting || '';
+      let lrcSrc = card.dataset.lrc || '';
+      let inlineLyrics = card.dataset.lyrics || '';
+      let lyrics: { time: number; text: string }[] = [];
+      let isPlaying = false;
+
+      const metingParam = (name: string) => {
+        if (!metingUrl) return '';
+        try {
+          return new URL(metingUrl, location.href).searchParams.get(name) || '';
+        } catch {
+          return '';
+        }
+      };
+      const fallbackUrl = (m: any) => {
+        const server = String(m?.source || metingParam('server') || '').toLowerCase();
+        const id = String(m?.id || metingParam('id') || '').trim();
+        return server === 'netease' && id ? `https://music.163.com/song/media/outer/url?id=${encodeURIComponent(id)}.mp3` : '';
+      };
+      const fmtTime = (s: number) => {
+        if (!Number.isFinite(s) || s <= 0) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+      };
+      const parseTs = (token: string): number | null => {
+        const t = (token || '').trim().replace(/：/g, ':');
+        if (!t) return null;
+        if (t.includes(':')) {
+          const [a, b = '0'] = t.split(':');
+          const mm = Number(a);
+          const ss = Number(b);
+          return Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : null;
+        }
+        const n = Number(t);
+        return Number.isFinite(n) ? n : null;
+      };
+      const parseLRC = (input: string) => {
+        const out: { time: number; text: string }[] = [];
+        for (const line of (input || '').split(/\r?\n/)) {
+          const tags = [...line.matchAll(/\[([^\]]+)\]/g)];
+          const text = line.replace(/\[([^\]]+)\]/g, '').trim();
+          for (const m of tags) {
+            const time = parseTs(m[1]);
+            if (time != null) out.push({ time, text: text || '…' });
+          }
+        }
+        return out.sort((a, b) => a.time - b.time);
+      };
+      const renderLyric = (idx: number) => {
+        if (!curLyric || !lyrics.length) return;
+        const cur = idx >= 0 && idx < lyrics.length ? lyrics[idx] : lyrics[0];
+        const next = cur ? cur.text || '…' : '…';
+        if (curLyric.textContent === next) return;
+        if (exitLyric && curLyric.textContent) {
+          exitLyric.textContent = curLyric.textContent;
+          exitLyric.animate?.(
+            [
+              { opacity: 1, transform: 'translateY(0)' },
+              { opacity: 0, transform: 'translateY(-10px)' },
+            ],
+            { duration: 420, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'both' },
+          );
+        }
+        curLyric.textContent = next;
+        curLyric.animate?.(
+          [
+            { opacity: 0, transform: 'translateY(10px)' },
+            { opacity: 1, transform: 'translateY(0)' },
+          ],
+          { duration: 420, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'both' },
+        );
+      };
+      const loadLyrics = async () => {
+        let txt = inlineLyrics;
+        if (!txt && lrcSrc) {
+          try {
+            if (/^https?:|^\//.test(lrcSrc)) {
+              const r = await fetch(lrcSrc);
+              if (r.ok) txt = await r.text();
+            } else txt = lrcSrc;
+          } catch {}
+        }
+        if (txt) {
+          lyrics = parseLRC(txt);
+          renderLyric(0);
+        } else if (curLyric) {
+          curLyric.textContent = `${titleEl?.textContent || ''} - ${artistEl?.textContent || ''}`.replace(/^ - | - $/, '');
+        }
+      };
+
+      const updateState = () => {
+        if (iPlay) iPlay.style.display = isPlaying ? 'none' : 'block';
+        if (iPause) iPause.style.display = isPlaying ? 'block' : 'none';
+        if (isPlaying)
+          audio.play().catch(() => {
+            isPlaying = false;
+            updateState();
+          });
+        else audio.pause();
+      };
+      playBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isPlaying = !isPlaying;
+        updateState();
+      });
+      audio.addEventListener('timeupdate', () => {
+        const cur = audio.currentTime;
+        const dur = audio.duration || 0;
+        if (bar) bar.style.width = `${dur > 0 ? (cur / dur) * 100 : 0}%`;
+        if (timeEl) timeEl.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+        if (lyrics.length) {
+          let idx = -1;
+          for (let i = 0; i < lyrics.length; i++) {
+            if (cur >= lyrics[i].time) idx = i;
+            else break;
+          }
+          renderLyric(idx);
+        }
+      });
+      audio.addEventListener('loadedmetadata', () => {
+        if (timeEl) timeEl.textContent = `0:00 / ${fmtTime(audio.duration)}`;
+      });
+      audio.addEventListener('ended', () => {
+        isPlaying = false;
+        updateState();
+        if (bar) bar.style.width = '0%';
+      });
+      progress?.addEventListener('click', (e) => {
+        const rect = progress.getBoundingClientRect();
+        const pct = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+        audio.currentTime = pct * (audio.duration || 0);
+      });
+
+      (async () => {
+        if (metingUrl) {
+          try {
+            const data = await (await fetch(metingUrl)).json();
+            const m = Array.isArray(data) ? data[0] : data;
+            if (m) {
+              if (titleEl && m.title) titleEl.textContent = m.title;
+              if (artistEl && m.author) artistEl.textContent = m.author;
+              if (coverEl && m.pic) coverEl.style.backgroundImage = `url("${m.pic}")`;
+              const src = m.url || fallbackUrl(m);
+              if (src) audio.src = src;
+              if (m.lrc) {
+                lrcSrc = m.lrc;
+                inlineLyrics = '';
+              }
+            }
+          } catch {
+            if (curLyric) curLyric.textContent = '音乐数据加载失败';
+          }
+        }
+        await loadLyrics();
+      })();
+    });
+  }
+
+  // ---------------- 视频播放器：Plyr + HLS/DASH（CDN 动态加载） ----------------
+  function loadCssOnce(href: string) {
+    const key = '__fv_css__' + href;
+    if ((window as any)[key]) return (window as any)[key];
+    (window as any)[key] = new Promise<void>((resolve) => {
+      if (document.querySelector(`link[href="${href}"]`)) return resolve();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.onload = () => resolve();
+      link.onerror = () => resolve();
+      document.head.appendChild(link);
+    });
+    return (window as any)[key];
+  }
+  function loadScriptOnce(src: string, check: () => boolean) {
+    const key = '__fv_js__' + src;
+    if (check()) return Promise.resolve();
+    if ((window as any)[key]) return (window as any)[key];
+    (window as any)[key] = new Promise<void>((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('load failed ' + src));
+      document.head.appendChild(s);
+    });
+    return (window as any)[key];
+  }
+  function ensurePlayerAssets() {
+    loadCssOnce('https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.css');
+    if (!(window as any).__fvAssets) {
+      (window as any).__fvAssets = Promise.all([
+        loadScriptOnce('https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.polyfilled.min.js', () => !!(window as any).Plyr),
+        loadScriptOnce('https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js', () => !!(window as any).Hls),
+        loadScriptOnce('https://cdn.jsdelivr.net/npm/dashjs@4/dist/dash.all.min.js', () => !!((window as any).dashjs?.MediaPlayer)),
+      ]);
+    }
+    return (window as any).__fvAssets;
+  }
+
+  async function initVideoPlayer(root: HTMLElement) {
+    if (root.dataset.init === '1') return;
+    root.dataset.init = '1';
+    const video = root.querySelector('video') as HTMLVideoElement | null;
+    const overlay = root.querySelector<HTMLElement>('[data-role="overlay"]');
+    const message = root.querySelector<HTMLElement>('[data-role="message"]');
+    const badge = root.querySelector<HTMLElement>('[data-role="badge"]');
+    const badgeText = root.querySelector<HTMLElement>('[data-role="badge-text"]');
+    if (!video || !overlay || !message || !badge || !badgeText) return;
+    let config: any = {};
+    try {
+      config = JSON.parse(root.getAttribute('data-config') || '{}');
+    } catch {}
+
+    let hls: any = null;
+    let dash: any = null;
+    let started = false;
+    let candidates: { type: string; url: string }[] = [];
+    let candIdx = -1;
+    let token = 0;
+
+    const inferType = (u: string) => {
+      const r = String(u || '').toLowerCase();
+      if (r.includes('/h/') || r.endsWith('.m3u8')) return 'hls';
+      if (r.includes('/d/') || r.endsWith('.mpd')) return 'dash';
+      return '';
+    };
+    const setBadge = (t: string, s: string) => {
+      badgeText.textContent = t || '';
+      badge.dataset.state = s || 'info';
+    };
+    const showOverlay = (t: string, s: string) => {
+      message.textContent = t || '';
+      overlay.dataset.hidden = 'false';
+      setBadge(t, s || 'loading');
+    };
+    const hideOverlay = () => {
+      overlay.dataset.hidden = 'true';
+      if (badge.dataset.state !== 'error') setBadge('Playing', 'playing');
+    };
+    const setError = (t: string) => {
+      message.textContent = t || '播放错误';
+      overlay.dataset.hidden = 'false';
+      setBadge('Error', 'error');
+    };
+    const cleanup = () => {
+      try { hls?.destroy(); } catch {}
+      hls = null;
+      try { dash?.reset(); } catch {}
+      dash = null;
+      try { video.removeAttribute('src'); video.load(); } catch {}
+    };
+
+    video.addEventListener('playing', () => { started = true; hideOverlay(); });
+    video.addEventListener('waiting', () => { if (!video.ended) showOverlay('缓冲中…', 'buffering'); });
+    video.addEventListener('pause', () => { if (!video.ended && started && !video.seeking) setBadge('Paused', 'info'); });
+
+    const tryNext = (reason: string) => {
+      const n = candIdx + 1;
+      if (n >= candidates.length) return setError(reason || '无可用流');
+      loadCandidate(n, reason);
+    };
+    const attachHls = (url: string, tk: number) => {
+      const W = window as any;
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        showOverlay('Loading HLS…', 'loading');
+        const onMeta = () => { if (tk === token) { setBadge('HLS', 'info'); config.autoplay ? video.play().catch(() => {}) : (overlay.dataset.hidden = 'true'); } };
+        video.addEventListener('loadedmetadata', onMeta, { once: true });
+        video.addEventListener('error', () => tk === token && tryNext('HLS failed'), { once: true });
+        video.src = url;
+        video.load();
+        return;
+      }
+      if (!(W.Hls && W.Hls.isSupported())) return tryNext('HLS not supported');
+      showOverlay('Loading HLS…', 'loading');
+      hls = new W.Hls({ enableWorker: true, lowLatencyMode: false });
+      hls.on(W.Hls.Events.MEDIA_ATTACHED, () => tk === token && hls.loadSource(url));
+      hls.on(W.Hls.Events.MANIFEST_PARSED, () => { if (tk === token) { setBadge('HLS', 'info'); config.autoplay ? video.play().catch(() => {}) : (overlay.dataset.hidden = 'true'); } });
+      hls.on(W.Hls.Events.ERROR, (_e: any, d: any) => { if (tk === token && d?.fatal) { if (!started) tryNext('HLS error'); else setError('HLS 播放错误'); } });
+      hls.attachMedia(video);
+    };
+    const attachDash = (url: string, tk: number) => {
+      const W = window as any;
+      if (!(W.dashjs && W.dashjs.MediaPlayer)) return tryNext('DASH not supported');
+      showOverlay('Loading DASH…', 'loading');
+      dash = W.dashjs.MediaPlayer().create();
+      dash.initialize(video, url, false);
+      const ev = W.dashjs.MediaPlayer.events || {};
+      ev.STREAM_INITIALIZED && dash.on(ev.STREAM_INITIALIZED, () => { if (tk === token) { setBadge('DASH', 'info'); overlay.dataset.hidden = 'true'; config.autoplay && video.play().catch(() => {}); } });
+      ev.ERROR && dash.on(ev.ERROR, () => { if (tk === token) { if (!started) tryNext('DASH error'); else setError('DASH 播放错误'); } });
+    };
+    function loadCandidate(i: number, reason?: string) {
+      candIdx = i;
+      token += 1;
+      const tk = token;
+      started = false;
+      cleanup();
+      const c = candidates[i];
+      if (!c) return setError('无候选流');
+      const label = c.type === 'dash' ? 'DASH' : 'HLS';
+      showOverlay(reason ? `重试 ${label}…` : `Loading ${label}…`, 'loading');
+      c.type === 'dash' ? attachDash(c.url, tk) : attachHls(c.url, tk);
+    }
+    const resolveCandidates = async () => {
+      const out: { type: string; url: string }[] = [];
+      if (config.streamUrl) out.push({ type: config.type || inferType(config.streamUrl) || 'hls', url: config.streamUrl });
+      else if (config.type === 'hls' && config.hlsUrl) out.push({ type: 'hls', url: config.hlsUrl });
+      else if (config.type === 'dash' && config.dashUrl) out.push({ type: 'dash', url: config.dashUrl });
+      else {
+        if (config.hlsUrl) out.push({ type: 'hls', url: config.hlsUrl });
+        if (config.dashUrl) out.push({ type: 'dash', url: config.dashUrl });
+      }
+      const seen = new Set<string>();
+      return out.filter((c) => c.url && !seen.has(c.type + c.url) && seen.add(c.type + c.url));
+    };
+
+    try {
+      showOverlay('加载播放器库…', 'loading');
+      await ensurePlayerAssets();
+      const W = window as any;
+      if (W.Plyr)
+        new W.Plyr(video, {
+          controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'pip', 'fullscreen'],
+          settings: ['speed'],
+          speed: { selected: 1, options: [0.75, 1, 1.25, 1.5, 2] },
+        });
+      candidates = await resolveCandidates();
+      if (!candidates.length) return setError('无法解析视频源');
+      loadCandidate(0);
+    } catch (e) {
+      setError('播放器初始化失败');
+      console.error('[video-embed]', e);
+    }
+  }
+  function initVideoPlayers() {
+    const roots = document.querySelectorAll<HTMLElement>('.fv-player-root[data-config]');
+    roots.forEach((r) => initVideoPlayer(r));
+  }
+
+  function initLegacyEmbeds() {
+    initGithubCards();
+    initMusicCards();
+    initVideoPlayers();
+  }
+  document.addEventListener('astro:page-load', initLegacyEmbeds);
+</script>

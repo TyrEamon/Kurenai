@@ -1,0 +1,12 @@
+[
+  {
+    "name": "示例朋友 A",
+    "url": "https://example.com",
+    "desc": "一句话介绍这位朋友的站。"
+  },
+  {
+    "name": "示例朋友 B",
+    "url": "https://example.org",
+    "desc": "折腾爱好者 / 前端 / 摄影。"
+  }
+]

@@ -1,0 +1,218 @@
+---
+import type { Post } from '../lib/posts';
+import {
+  coverTransitionName,
+  formatMonthYear,
+  readingTime,
+  wordCount,
+  formatCount,
+  isRandomCover,
+} from '../lib/posts';
+
+interface Props {
+  post: Post;
+}
+const { post } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const href = `${base}blog/${post.id}/`;
+const cover = post.data.image;
+const random = isRandomCover(cover);
+const tname = coverTransitionName(post.id);
+const mins = readingTime(post.body, post.data.lang);
+const words = formatCount(wordCount(post.body, post.data.lang));
+---
+
+<a class="item" href={href} data-cursor>
+  <div class="item-body">
+    <div class="item-meta">
+      {
+        post.data.pinned && (
+          <span class="pin" title="置顶">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 17v5" />
+              <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+            </svg>
+            置顶
+          </span>
+        )
+      }
+      <span>{formatMonthYear(post.data.published)}</span>
+      {
+        post.data.category && post.data.category !== '置顶' && (
+          <>
+            <span class="sep">·</span>
+            <span class="cat">{post.data.category}</span>
+          </>
+        )
+      }
+      <span class="sep">·</span>
+      <span>{words} 字 · {mins} 分钟</span>
+      {post.data.lang === 'en' && <span class="lang">EN</span>}
+    </div>
+    <h3 class="item-title">{post.data.title}</h3>
+    {post.data.description && <p class="item-desc">{post.data.description}</p>}
+    {
+      post.data.tags.length > 0 && (
+        <div class="item-tags">
+          {post.data.tags.slice(0, 4).map((t) => (
+            <span class="tag">#{t}</span>
+          ))}
+        </div>
+      )
+    }
+  </div>
+
+  {
+    cover && (
+      <span class="item-preview">
+        <img
+          src={cover}
+          alt=""
+          loading="lazy"
+          transition:name={tname}
+          data-random-cover={random ? 'h' : undefined}
+          data-random-key={random ? post.id : undefined}
+        />
+      </span>
+    )
+  }
+</a>
+
+<style>
+  .item {
+    position: relative;
+    display: block;
+    padding: 1.7rem 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.45s var(--ease);
+  }
+  .item::before {
+    content: '';
+    position: absolute;
+    left: -1.1rem;
+    top: 2.2rem;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: scale(0);
+    transition: transform 0.4s var(--ease);
+  }
+  .item:hover {
+    padding-left: 1.3rem;
+  }
+  .item:hover::before {
+    transform: scale(1);
+  }
+  .item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    /* 给右侧 hover 预览留出空间，避免长描述被盖住 */
+    padding-right: 1rem;
+  }
+  .item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--fg-faint);
+  }
+  .item-meta .cat {
+    color: var(--fg-dim);
+  }
+  .pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28em;
+    padding: 0.05em 0.5em 0.05em 0.4em;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+  }
+  .pin svg {
+    width: 0.82em;
+    height: 0.82em;
+  }
+  .item-meta .sep {
+    opacity: 0.5;
+  }
+  .item-meta .lang {
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    padding: 0 0.3em;
+    font-size: 0.62rem;
+  }
+  .item-title {
+    font-family: var(--font-zh-display);
+    font-weight: 700;
+    font-size: clamp(1.2rem, 2.1vw, 1.55rem);
+    line-height: 1.3;
+    color: var(--fg);
+    transition: color 0.2s;
+  }
+  .item:hover .item-title {
+    color: var(--accent);
+  }
+  .item-desc {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--fg-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .item-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin-top: 0.15rem;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+  /* 右侧 hover 浮出的封面预览 */
+  .item-preview {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    width: 190px;
+    height: 118px;
+    transform: translateY(-50%) scale(0.92);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 3;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: opacity 0.35s var(--ease), transform 0.45s var(--ease);
+  }
+  .item:hover .item-preview {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  .item-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  @media (max-width: 760px) {
+    .item-preview {
+      display: none;
+    }
+    .item-body {
+      padding-right: 0;
+    }
+  }
+</style>

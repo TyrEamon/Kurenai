@@ -1,0 +1,26 @@
+---
+// 通用滚动揭示：[data-reveal] 进视口淡入上移；reduced-motion 直接显示（不动画）。
+---
+<script>
+  function initReveal() {
+    const els = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!els.length) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach((el) => el.classList.add('is-in'));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-in');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    els.forEach((el) => io.observe(el));
+  }
+  document.addEventListener('astro:page-load', initReveal);
+</script>

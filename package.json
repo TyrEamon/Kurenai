@@ -1,0 +1,35 @@
+{
+  "name": "runebyte-blog",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && pagefind",
+    "build:fast": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^6.0.3",
+    "@astrojs/rss": "^4.0.18",
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource-variable/bricolage-grotesque": "^5.0.0",
+    "@fontsource-variable/inter": "^5.0.0",
+    "@fontsource-variable/jetbrains-mono": "^5.0.0",
+    "@fontsource-variable/space-grotesk": "^5.0.0",
+    "@iconify-json/lucide": "^1.2.113",
+    "@iconify-json/simple-icons": "^1.2.86",
+    "astro": "^6.4.8",
+    "astro-icon": "^1.1.5",
+    "hastscript": "^9.0.1",
+    "lenis": "^1.1.0",
+    "rehype-callouts": "^2.2.0",
+    "remark-directive": "^4.0.0",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "gray-matter": "^4.0.3",
+    "pagefind": "^1.5.2"
+  }
+}

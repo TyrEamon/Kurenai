@@ -1,0 +1,32 @@
+---
+// 给文章代码块加复制按钮（hover 出现，点击复制）。
+---
+<script>
+  function initCopy() {
+    document.querySelectorAll<HTMLElement>('.prose pre').forEach((pre) => {
+      if (pre.dataset.copy) return;
+      pre.dataset.copy = '1';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'code-copy';
+      btn.textContent = 'Copy';
+      btn.setAttribute('aria-label', '复制代码');
+      pre.appendChild(btn);
+      btn.addEventListener('click', async () => {
+        const code = (pre.querySelector('code') as HTMLElement | null)?.innerText ?? pre.innerText;
+        try {
+          await navigator.clipboard.writeText(code.replace(/\n+$/, ''));
+          btn.textContent = '已复制';
+          btn.classList.add('done');
+          setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('done');
+          }, 1600);
+        } catch {
+          /* clipboard 不可用时忽略 */
+        }
+      });
+    });
+  }
+  document.addEventListener('astro:page-load', initCopy);
+</script>

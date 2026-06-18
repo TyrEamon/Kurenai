@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" role="img" aria-label="RuneByte 封面">
+  <rect width="1200" height="750" fill="#0a0a0a"/>
+  <g stroke="#f0f0f0" stroke-opacity="0.1" stroke-width="1">
+    <line x1="0" y1="188" x2="1200" y2="188"/>
+    <line x1="0" y1="562" x2="1200" y2="562"/>
+    <line x1="300" y1="0" x2="300" y2="750"/>
+    <line x1="900" y1="0" x2="900" y2="750"/>
+  </g>
+  <circle cx="900" cy="188" r="9" fill="#ff1e00"/>
+  <text x="80" y="430" font-family="'Space Grotesk',sans-serif" font-size="200" font-weight="700" letter-spacing="-10" fill="#f0f0f0">RB</text>
+  <text x="84" y="500" font-family="monospace" font-size="26" letter-spacing="6" fill="#f0f0f0" fill-opacity="0.55">CREATIVE NOTES — 折腾 与 复盘</text>
+  <text x="1120" y="700" text-anchor="end" font-family="monospace" font-size="22" letter-spacing="4" fill="#ff1e00">V1.0</text>
+</svg>

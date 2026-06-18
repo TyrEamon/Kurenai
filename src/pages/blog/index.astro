@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getArticles } from '../../lib/posts';
+
+const posts = await getArticles();
+---
+
+<BaseLayout title="文章 · RuneByte" description="全部文章 — 项目复盘与折腾记录">
+  <section class="wrap list-page">
+    <header class="lp-head">
+      <p class="eyebrow">All · 全部文章</p>
+      <h1>文章</h1>
+    </header>
+    <div class="list">
+      {posts.map((post) => <PostCard post={post} />)}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .list-page {
+    padding-top: clamp(3rem, 10vh, 6rem);
+  }
+  .lp-head {
+    margin-bottom: 2rem;
+  }
+  .lp-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    letter-spacing: -0.03em;
+    margin-top: 0.3rem;
+  }
+  :global(:lang(zh)) .lp-head h1 {
+    font-family: var(--font-zh-display);
+    letter-spacing: 0;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+  }
+</style>

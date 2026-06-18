@@ -1,0 +1,64 @@
+---
+// 回到顶部：滚动一定距离后出现，点击平滑滚回顶部。
+---
+<button class="to-top" type="button" aria-label="回到顶部" data-cursor>↑</button>
+
+<style>
+  .to-top {
+    position: fixed;
+    bottom: 1.6rem;
+    right: 1.6rem;
+    z-index: 45;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--fg-dim);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s var(--ease), color 0.2s, border-color 0.2s;
+  }
+  .to-top.show {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .to-top:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+</style>
+
+<script>
+  let off: (() => void) | null = null;
+  function initTop() {
+    off?.();
+    off = null;
+    const btn = document.querySelector<HTMLButtonElement>('.to-top');
+    if (!btn) return;
+    const onScroll = () => btn.classList.toggle('show', window.scrollY > innerHeight * 0.8);
+    const onClick = () => {
+      const l = (window as any).lenis;
+      if (l) l.scrollTo(0, { duration: 1.0 });
+      else scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    btn.addEventListener('click', onClick);
+    onScroll();
+    off = () => {
+      removeEventListener('scroll', onScroll);
+      btn.removeEventListener('click', onClick);
+    };
+  }
+  document.addEventListener('astro:page-load', initTop);
+  document.addEventListener('astro:before-swap', () => {
+    off?.();
+    off = null;
+  });
+</script>

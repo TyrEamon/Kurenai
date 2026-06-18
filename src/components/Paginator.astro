@@ -1,0 +1,59 @@
+---
+interface Props {
+  page: {
+    currentPage: number;
+    lastPage: number;
+    url: { prev?: string; next?: string };
+  };
+}
+const { page } = Astro.props;
+---
+
+{
+  page.lastPage > 1 && (
+    <nav class="paginator" aria-label="分页">
+      {page.url.prev ? (
+        <a href={page.url.prev} data-cursor>
+          ← 上一页
+        </a>
+      ) : (
+        <span class="dim">← 上一页</span>
+      )}
+      <span class="pg">
+        {page.currentPage} / {page.lastPage}
+      </span>
+      {page.url.next ? (
+        <a href={page.url.next} data-cursor>
+          下一页 →
+        </a>
+      ) : (
+        <span class="dim">下一页 →</span>
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .paginator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .paginator a {
+    color: var(--fg-dim);
+    transition: color 0.2s;
+  }
+  .paginator a:hover {
+    color: var(--accent);
+  }
+  .pg {
+    color: var(--fg-faint);
+  }
+  .dim {
+    color: var(--line-strong);
+  }
+</style>

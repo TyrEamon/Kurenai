@@ -1,0 +1,761 @@
+/* ===================================================================
+   RuneByte · 全局样式与设计 tokens
+   暗(创意态,默认) / 浅(阅读态) 双模式 — 详见 设计扩展笔记 §0/§7
+   =================================================================== */
+
+:root,
+[data-theme='dark'] {
+  --bg: #0a0a0a;
+  --bg-soft: #141414;
+  --fg: #f0f0f0;
+  --fg-dim: rgba(240, 240, 240, 0.62);
+  --fg-faint: rgba(240, 240, 240, 0.36);
+  --accent: #ff1e00;
+  --line: rgba(240, 240, 240, 0.14);
+  --line-strong: rgba(240, 240, 240, 0.28);
+  --pure: #ffffff;
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: #f4f1ea; /* 米白,非纯白 */
+  --bg-soft: #eae5d9;
+  --fg: #16130f;
+  --fg-dim: rgba(22, 19, 15, 0.64);
+  --fg-faint: rgba(22, 19, 15, 0.42);
+  --accent: #e01b00; /* 浅底略深红,保对比 */
+  --line: rgba(22, 19, 15, 0.16);
+  --line-strong: rgba(22, 19, 15, 0.3);
+  --pure: #000000;
+  color-scheme: light;
+}
+
+:root {
+  --font-display: 'Space Grotesk Variable', system-ui, sans-serif;
+  --font-zh-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'Source Han Serif SC', serif;
+  --font-body: 'Inter Variable', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-emphasis: 'Bricolage Grotesque Variable', var(--font-display);
+
+  --measure: 68ch;
+  --page-max: 1480px;
+  --pad: clamp(1.1rem, 4vw, 3rem);
+  --ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --anchor-offset: 6rem; /* 锚点跳转 / scroll-spy 的统一顶部避让(= 固定头高度)；改这一处即可 */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scrollbar-width: none;
+  -webkit-text-size-adjust: 100%;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.35s var(--ease), color 0.35s var(--ease);
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+
+/* 编辑式小标签 / eyebrow */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* 强调词换字体(Machine 替代),不变色 — 招牌手法 */
+.em-font {
+  font-family: var(--font-emphasis);
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* ---------- 文章正文 prose(安静阅读核) ---------- */
+.prose {
+  max-width: var(--measure);
+  font-size: 1.075rem;
+  line-height: 1.78;
+  color: var(--fg);
+}
+.prose > * + * {
+  margin-top: 1.4em;
+}
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-display);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin-top: 2.2em;
+  scroll-margin-top: var(--anchor-offset);
+}
+.prose h1 {
+  scroll-margin-top: var(--anchor-offset);
+}
+:lang(zh) .prose h2,
+:lang(zh) .prose h3,
+:lang(zh) .prose h4 {
+  font-family: var(--font-zh-display);
+  letter-spacing: 0;
+}
+.prose h2 {
+  font-size: 1.6rem;
+}
+.prose h3 {
+  font-size: 1.3rem;
+}
+.prose a {
+  color: var(--fg);
+  border-bottom: 1px solid var(--line-strong);
+  transition: color 0.2s, border-color 0.2s;
+}
+.prose a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.prose strong {
+  font-family: var(--font-emphasis);
+  font-weight: 700;
+}
+.prose blockquote {
+  border-left: 2px solid var(--accent);
+  padding-left: 1.1em;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+.prose code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--bg-soft);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}
+.prose pre {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 1.1rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  overflow-x: auto;
+}
+/* 代码块复制按钮 */
+.code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--fg-faint);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.2em 0.6em;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+}
+.prose pre:hover .code-copy {
+  opacity: 1;
+}
+.code-copy:hover {
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+.code-copy.done {
+  color: var(--accent);
+  border-color: var(--accent);
+  opacity: 1;
+}
+.prose img {
+  border-radius: 4px;
+  margin-inline: auto;
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+}
+.prose li + li {
+  margin-top: 0.4em;
+}
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- 提示框 Callouts（rehype-callouts·github 结构 / 自定义暗色样式） ---------- */
+.prose .callout {
+  --cc: var(--fg-dim);
+  margin-top: 1.4em;
+  padding: 0.85em 1.1em;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cc);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.prose .callout[data-callout='note'] {
+  --cc: #4a90e2;
+}
+.prose .callout[data-callout='tip'] {
+  --cc: #3fb950;
+}
+.prose .callout[data-callout='important'] {
+  --cc: #a371f7;
+}
+.prose .callout[data-callout='warning'] {
+  --cc: #d29922;
+}
+.prose .callout[data-callout='caution'] {
+  --cc: var(--accent);
+}
+.prose .callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--cc);
+  list-style: none;
+}
+.prose .callout-title::-webkit-details-marker {
+  display: none;
+}
+.prose .callout-title-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.prose .callout-title-icon svg {
+  width: 1.05em;
+  height: 1.05em;
+}
+.prose .callout-content {
+  margin-top: 0.7em;
+  color: var(--fg);
+}
+.prose .callout-content > :first-child {
+  margin-top: 0;
+}
+.prose .callout-content > :last-child {
+  margin-bottom: 0;
+}
+.prose .callout-content > * + * {
+  margin-top: 0.8em;
+}
+/* 可折叠（Obsidian 的 [!type]- 语法 → <details>） */
+.prose .callout[data-collapsible='true'] .callout-title {
+  cursor: pointer;
+}
+.prose .callout-fold-icon {
+  display: inline-flex;
+  margin-left: auto;
+}
+.prose .callout-fold-icon svg {
+  width: 1em;
+  height: 1em;
+  transition: transform 0.2s var(--ease);
+}
+.prose .callout[data-collapsible='true']:not([open]) .callout-fold-icon svg {
+  transform: rotate(-90deg);
+}
+
+/* ===================================================================
+   Legacy 兼容层（旧 Fuwari 指令 / HTML → 新主题样式）
+   作用域限定 .prose，全部用新站 token；不引入任何 Fuwari CSS。
+   =================================================================== */
+
+/* ---- ::github 仓库卡 ---- */
+.prose a.gh-card,
+.prose a.gh-card:hover {
+  display: block;
+  color: var(--fg);
+  text-decoration: none;
+  border-bottom: none;
+}
+.prose .gh-card {
+  margin-top: 1.4em;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  transition: border-color 0.2s var(--ease);
+}
+.prose .gh-card:hover {
+  border-color: var(--line-strong);
+}
+.gh-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.gh-card-id {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+}
+.gh-card-owner {
+  color: var(--fg-dim);
+}
+.gh-card-sep {
+  color: var(--fg-faint);
+}
+.gh-card-repo {
+  color: var(--fg);
+  font-weight: 600;
+}
+.gh-card-logo {
+  flex-shrink: 0;
+  color: var(--fg-faint);
+}
+.gh-card-desc {
+  margin-top: 0.6rem;
+  color: var(--fg-dim);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.gh-card-meta {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+}
+.gh-card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.gh-card-stat b {
+  color: var(--fg-dim);
+  font-weight: 600;
+}
+.gh-card-dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+/* ---- ::music 音乐播放器 ---- */
+.prose .music-card {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.4em;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.music-cover {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: var(--line) center / cover no-repeat;
+}
+.music-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.music-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.music-title {
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.music-artist {
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+.music-lyric {
+  position: relative;
+  min-height: 1.5em;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.music-lyric .lyric-exit,
+.music-lyric .lyric-current {
+  grid-area: 1 / 1;
+}
+.music-lyric .lyric-exit {
+  opacity: 0;
+  pointer-events: none;
+}
+.music-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: auto;
+}
+.music-play {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.music-play:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.music-play svg {
+  fill: currentColor;
+}
+.music-progress {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  overflow: hidden;
+}
+.music-progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+}
+.music-time {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+}
+
+/* ---- ::v 视频播放器 ---- */
+.prose .video-embed {
+  margin-top: 1.4em;
+  width: 100%;
+}
+.video-embed-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--video-ratio, 16 / 9);
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+.video-embed-frame > iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.fv-player-root {
+  --plyr-color-main: var(--accent);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: #fff;
+}
+.fv-player-root .plyr,
+.fv-player-video {
+  width: 100%;
+  height: 100%;
+}
+.fv-player-video,
+.fv-player-root .plyr video {
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+.fv-player-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.25s var(--ease);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.24));
+}
+.fv-player-overlay[data-hidden='true'] {
+  opacity: 0;
+}
+.fv-player-message {
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.82rem;
+}
+.fv-player-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #fff;
+  pointer-events: none;
+}
+.fv-player-badge .dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #fbbf24;
+}
+.fv-player-badge[data-state='playing'] .dot {
+  background: #4ade80;
+}
+.fv-player-badge[data-state='error'] .dot {
+  background: var(--accent);
+}
+
+/* ---- <details> 折叠块 ---- */
+.prose details {
+  margin-top: 1.4em;
+  padding: 0 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.prose details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 0;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--fg-dim);
+  transition: color 0.2s;
+}
+.prose details > summary::-webkit-details-marker {
+  display: none;
+}
+.prose details > summary::before {
+  content: '';
+  width: 0.5em;
+  height: 0.5em;
+  flex-shrink: 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s var(--ease);
+}
+.prose details[open] > summary::before {
+  transform: rotate(45deg);
+}
+.prose details > summary:hover {
+  color: var(--fg);
+}
+.prose details[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.9rem;
+}
+.prose details > :not(summary) {
+  margin-bottom: 0.9rem;
+}
+
+/* ---- 致谢墙（top.md 的 raw HTML + class） ---- */
+.prose .thanks-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.4em;
+}
+.prose .thanks-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.prose .thanks-card > div {
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--fg-dim);
+}
+.prose img.thanks-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line-strong);
+}
+.prose .thanks-card b {
+  font-family: var(--font-emphasis);
+  color: var(--fg);
+}
+.prose .thanks-card a {
+  border-bottom: none;
+  color: var(--fg-dim);
+  font-size: 0.84rem;
+}
+.prose .thanks-card a:hover {
+  color: var(--accent);
+}
+.prose .thanks-tag {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0 0.45em;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  color: var(--fg-faint);
+}
+
+.prose .legacy-directive-error {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+/* ---------- 渐进呈现（克制版，仅 JS 启用时生效；reduced-motion 跳过） ---------- */
+/* 块级元素(代码/引用/图表)进视口轻淡入 */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+/* 图片 blur-up：载入完由模糊放大 → 清晰 */
+.prose img.blur-load {
+  opacity: 0;
+  filter: blur(12px);
+  transform: scale(1.03);
+  transition: opacity 0.6s var(--ease), filter 0.6s var(--ease), transform 0.6s var(--ease);
+}
+.prose img.blur-load.loaded {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+/* 通用滚动揭示（[data-reveal]，仅 JS 开启时才隐藏 → no-JS / SEO 安全） */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+}
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 待机页锁定整页滚动 */
+html.standby-lock {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

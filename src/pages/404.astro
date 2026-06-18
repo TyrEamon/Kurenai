@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="404 · RuneByte" description="页面走丢了">
+  <section class="wrap nf">
+    <h1>404<span class="dot">.</span></h1>
+    <p class="nf-sub">这个页面走丢了——不存在，或已不在了。</p>
+    <a class="back" href={base} data-cursor>← 回首页</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .nf {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 5rem;
+  }
+  .nf h1 {
+    font-family: var(--font-display);
+    font-size: clamp(5rem, 22vw, 16rem);
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+  }
+  .nf h1 .dot {
+    color: var(--accent);
+  }
+  .nf-sub {
+    color: var(--fg-dim);
+    margin-top: 1rem;
+  }
+  .back {
+    margin-top: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--fg-dim);
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+</style>

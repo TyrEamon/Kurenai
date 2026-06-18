@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getNotes, groupByYear, formatDayMonth } from '../../lib/posts';
+
+const notes = await getNotes();
+const years = groupByYear(notes);
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="手记 · RuneByte" description="日常、碎想、折腾随手记">
+  <section class="wrap notes">
+    <header class="nt-head">
+      <p class="eyebrow">Notes · 手记</p>
+      <h1>手记</h1>
+      <p class="nt-sub">折腾、日常、碎想——比长文更短、更随性的随手记。</p>
+    </header>
+
+    {
+      notes.length === 0 ? (
+        <p class="empty">还没有手记。</p>
+      ) : (
+        years.map(({ year, posts }) => (
+          <div class="nt-year">
+            <span class="nt-y">{year}</span>
+            <ul class="stream">
+              {posts.map((p) => (
+                <li class="nt-item">
+                  <a href={`${base}blog/${p.id}/`} data-cursor>
+                    <span class="nt-date">{formatDayMonth(p.data.published)}</span>
+                    <span class="nt-body">
+                      <span class="nt-title">{p.data.title}</span>
+                      {p.data.description && <span class="nt-desc">{p.data.description}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )
+    }
+  </section>
+</BaseLayout>
+
+<style>
+  .notes {
+    padding-top: clamp(3rem, 10vh, 6rem);
+  }
+  .nt-head {
+    margin-bottom: 2.5rem;
+  }
+  .nt-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin: 0.3rem 0 0.6rem;
+  }
+  .nt-sub {
+    color: var(--fg-dim);
+    max-width: 40ch;
+  }
+  .nt-year {
+    display: grid;
+    grid-template-columns: 4rem 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .nt-y {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--fg-faint);
+    padding-top: 1rem;
+  }
+  .stream {
+    list-style: none;
+  }
+  .nt-item a {
+    display: flex;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.4s var(--ease);
+  }
+  .nt-item a:hover {
+    padding-left: 0.6rem;
+  }
+  .nt-date {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    padding-top: 0.15rem;
+    flex-shrink: 0;
+  }
+  .nt-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .nt-title {
+    color: var(--fg);
+  }
+  .nt-desc {
+    font-size: 0.88rem;
+    color: var(--fg-dim);
+  }
+  .empty {
+    color: var(--fg-faint);
+  }
+  @media (max-width: 560px) {
+    .nt-year {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
+    .nt-y {
+      padding-top: 0;
+    }
+  }
+</style>

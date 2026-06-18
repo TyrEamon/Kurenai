@@ -1,0 +1,80 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/bricolage-grotesque';
+import '../styles/global.css';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import CustomCursor from '../components/CustomCursor.astro';
+import SmoothScroll from '../components/SmoothScroll.astro';
+import RevealOnScroll from '../components/RevealOnScroll.astro';
+import BackToTop from '../components/BackToTop.astro';
+import RandomCover from '../components/RandomCover.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: 'zh' | 'en';
+  image?: string;
+  intro?: boolean;
+}
+
+const {
+  title,
+  description = '素未谋面的你，我是 Tyr。项目复盘与折腾记录。',
+  lang = 'zh',
+  image,
+  intro = false,
+} = Astro.props;
+
+const htmlLang = lang === 'en' ? 'en' : 'zh-CN';
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = image ? new URL(image, Astro.site).href : undefined;
+---
+
+<!doctype html>
+<html lang={htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="RuneByte"
+      href={new URL('rss.xml', Astro.site)}
+    />
+    <!-- 主题防闪烁：首屏前同步应用 -->
+    <script is:inline>
+      (() => {
+        document.documentElement.classList.add('js');
+        const t = localStorage.getItem('theme');
+        document.documentElement.dataset.theme =
+          t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      })();
+    </script>
+    <ClientRouter />
+  </head>
+  <body>
+    <CustomCursor />
+    <SiteHeader intro={intro} />
+    <main id="main">
+      <slot />
+    </main>
+    <SiteFooter />
+    <SmoothScroll />
+    <RevealOnScroll />
+    <BackToTop />
+    <RandomCover />
+    {intro && <slot name="intro" />}
+  </body>
+</html>

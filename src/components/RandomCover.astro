@@ -1,0 +1,86 @@
+---
+// 随机封面：image 为 RANDOM_COVER 哨兵（/wallpaper-sync-placeholder.svg）的文章，
+// 运行时从随机图 API 的 manifest 取一张横图填充其 <img data-random-cover>。
+// 迁移自旧站 Fuwari 的 wallpaper-sync 占位逻辑，简化为「列表卡片 + 文章头图」两处。
+//
+// 行为：
+//  - 同一标签会话内按 data-random-key（文章 id）保持稳定，使列表卡片与文章头图
+//    取到同一张图 → 共享元素形变（transition:name）切换时不跳图；
+//  - 整页刷新（新标签 / 关闭会话后）换新图；
+//  - manifest / 图片加载失败时回退占位 SVG（不留模糊空封面）。
+---
+
+<script>
+  const MANIFEST_URL = 'https://rapi.mtcacg.top/manifest.json';
+
+  type ManifestItem = { url: string } | string;
+  type Manifest = Record<string, ManifestItem[]>;
+
+  let manifestPromise: Promise<Manifest | null> | null = null;
+  function loadManifest(): Promise<Manifest | null> {
+    if (manifestPromise) return manifestPromise;
+    try {
+      const cached = sessionStorage.getItem('rc:manifest');
+      if (cached) return (manifestPromise = Promise.resolve(JSON.parse(cached)));
+    } catch {}
+    manifestPromise = fetch(MANIFEST_URL, { cache: 'force-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((m: Manifest | null) => {
+        try {
+          if (m) sessionStorage.setItem('rc:manifest', JSON.stringify(m));
+        } catch {}
+        return m;
+      })
+      .catch(() => null);
+    return manifestPromise;
+  }
+
+  function pickFor(key: string, list: ManifestItem[]): string | undefined {
+    const sk = 'rc:pick:' + key;
+    try {
+      const saved = sessionStorage.getItem(sk);
+      if (saved) return saved;
+    } catch {}
+    const item = list[Math.floor(Math.random() * list.length)];
+    const url = typeof item === 'string' ? item : item?.url;
+    try {
+      if (url) sessionStorage.setItem(sk, url);
+    } catch {}
+    return url;
+  }
+
+  const reveal = (img: HTMLImageElement) => img.classList.add('rc-ready');
+
+  async function fillRandomCovers() {
+    const imgs = [
+      ...document.querySelectorAll<HTMLImageElement>('img[data-random-cover]'),
+    ].filter((i) => !i.dataset.rcDone);
+    if (!imgs.length) return;
+    const manifest = await loadManifest();
+    imgs.forEach((img) => {
+      img.dataset.rcDone = '1';
+      const orient = img.getAttribute('data-random-cover') === 'v' ? 'v' : 'h';
+      const list = manifest?.[orient];
+      if (!Array.isArray(list) || !list.length) return reveal(img);
+      const url = pickFor((img.getAttribute('data-random-key') || orient) + ':' + orient, list);
+      if (!url) return reveal(img);
+      img.addEventListener('load', () => reveal(img), { once: true });
+      img.addEventListener('error', () => reveal(img), { once: true });
+      img.src = url;
+      if (img.complete && img.naturalWidth > 0) reveal(img);
+    });
+  }
+
+  document.addEventListener('astro:page-load', fillRandomCovers);
+</script>
+
+<style is:global>
+  /* JS 开启时先隐藏随机封面，取到图后淡入；no-JS 时正常显示占位 SVG。 */
+  .js img[data-random-cover] {
+    opacity: 0;
+    transition: opacity 0.55s var(--ease);
+  }
+  .js img[data-random-cover].rc-ready {
+    opacity: 1;
+  }
+</style>

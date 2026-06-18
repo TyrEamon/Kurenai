@@ -1,0 +1,105 @@
+---
+// 暗(默认)/浅 主题切换，持久化到 localStorage，ClientRouter 导航后重新绑定。
+// 图标：单个 SVG 的「太阳⇄月亮」形变 —— 暗色显月牙(遮罩咬出缺口)、浅色显太阳(光芒绽放)。
+---
+<button class="theme-toggle" type="button" data-cursor aria-label="切换主题">
+  <svg class="tt" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+    <mask id="tt-mask">
+      <rect x="0" y="0" width="24" height="24" fill="#fff" />
+      <circle class="tt-cut" cx="18.5" cy="6.5" r="7" fill="#000" />
+    </mask>
+    <circle class="tt-core" cx="12" cy="12" r="6" mask="url(#tt-mask)" />
+    <g class="tt-rays" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <line x1="20.2" y1="12" x2="22.6" y2="12" />
+      <line x1="17.8" y1="17.8" x2="19.5" y2="19.5" />
+      <line x1="12" y1="20.2" x2="12" y2="22.6" />
+      <line x1="6.2" y1="17.8" x2="4.5" y2="19.5" />
+      <line x1="3.8" y1="12" x2="1.4" y2="12" />
+      <line x1="6.2" y1="6.2" x2="4.5" y2="4.5" />
+      <line x1="12" y1="3.8" x2="12" y2="1.4" />
+      <line x1="17.8" y1="6.2" x2="19.5" y2="4.5" />
+    </g>
+  </svg>
+</button>
+
+<style>
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--fg);
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease);
+  }
+  .theme-toggle:hover {
+    border-color: var(--line-strong);
+    background: color-mix(in srgb, var(--fg) 6%, transparent);
+  }
+  .theme-toggle:active {
+    transform: scale(0.9);
+  }
+  .tt {
+    overflow: visible;
+  }
+  .tt-core {
+    fill: currentColor;
+  }
+  .tt-cut,
+  .tt-core,
+  .tt-rays {
+    transition: transform 0.5s var(--ease), opacity 0.4s var(--ease);
+  }
+  .tt-rays {
+    transform-origin: 12px 12px;
+  }
+
+  /* 暗(默认) = 月亮：遮罩圆贴近内核咬出月牙；光芒收起 */
+  .tt-cut {
+    transform: translate(0, 0);
+  }
+  .tt-rays {
+    opacity: 0;
+    transform: scale(0.4) rotate(-35deg);
+  }
+  /* 浅 = 太阳：遮罩圆移出内核(满月→整圆)；光芒绽放 */
+  [data-theme='light'] .tt-cut {
+    transform: translate(12px, -12px);
+  }
+  [data-theme='light'] .tt-rays {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+  /* 悬停时太阳轻转、月亮微缩，增加生气 */
+  [data-theme='light'] .theme-toggle:hover .tt-rays {
+    transform: scale(1.06) rotate(20deg);
+  }
+  [data-theme='dark'] .theme-toggle:hover .tt-core {
+    transform: scale(1.08);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tt-cut,
+    .tt-core,
+    .tt-rays {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function bindThemeToggle() {
+    const btn = document.querySelector<HTMLButtonElement>('.theme-toggle');
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('theme', next);
+    });
+  }
+  document.addEventListener('astro:page-load', bindThemeToggle);
+</script>

@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="搜索 · RuneByte" description="站内搜索">
+  <section class="wrap search-page">
+    <header class="sp-head">
+      <p class="eyebrow">Search · 搜索</p>
+      <h1>搜索</h1>
+      <p class="sp-note">中英全部内容；标签 / 语言可筛选。</p>
+    </header>
+
+    <link rel="stylesheet" href={`${base}pagefind/pagefind-ui.css`} />
+    <div id="search"></div>
+
+    <p class="sp-dev">提示：搜索索引在构建时生成，<code>npm run dev</code> 下不可用；请用 <code>npm run preview</code>（先 build）或线上查看。</p>
+  </section>
+</BaseLayout>
+
+<style>
+  .search-page {
+    padding-top: clamp(3rem, 10vh, 6rem);
+    min-height: 70vh;
+  }
+  .sp-head {
+    margin-bottom: 1.6rem;
+  }
+  .sp-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin-top: 0.3rem;
+  }
+  .sp-note {
+    color: var(--fg-dim);
+    margin-top: 0.4rem;
+  }
+  .sp-dev {
+    margin-top: 2rem;
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+  }
+  .sp-dev code {
+    font-family: var(--font-mono);
+    color: var(--fg-dim);
+  }
+  /* Pagefind Default UI 暗色/编辑式主题 */
+  #search {
+    --pagefind-ui-primary: var(--accent);
+    --pagefind-ui-text: var(--fg);
+    --pagefind-ui-background: var(--bg);
+    --pagefind-ui-border: var(--line-strong);
+    --pagefind-ui-tag: var(--bg-soft);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: 8px;
+    --pagefind-ui-font: var(--font-body);
+  }
+</style>
+
+<script>
+  let loaded = false;
+  function mount() {
+    const el = document.getElementById('search');
+    const PF = (window as any).PagefindUI;
+    if (!el || el.dataset.mounted || !PF) return;
+    el.dataset.mounted = '1';
+    new PF({
+      element: '#search',
+      showImages: true,
+      showSubResults: true,
+      pageSize: 8,
+      translations: {
+        placeholder: '搜索文章 / 手记…',
+        zero_results: '没有找到 "[SEARCH_TERM]" 相关内容',
+      },
+    });
+  }
+  function ensure() {
+    if (!document.getElementById('search')) return;
+    if ((window as any).PagefindUI) return mount();
+    if (loaded) return;
+    loaded = true;
+    const s = document.createElement('script');
+    s.src = import.meta.env.BASE_URL + 'pagefind/pagefind-ui.js';
+    s.onload = mount;
+    document.head.appendChild(s);
+  }
+  document.addEventListener('astro:page-load', ensure);
+</script>

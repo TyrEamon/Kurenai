@@ -1,0 +1,61 @@
+---
+import SocialIcons from './SocialIcons.astro';
+const base = import.meta.env.BASE_URL;
+const year = 2026;
+---
+
+<footer class="site-footer">
+  <div class="foot-top wrap">
+    <SocialIcons />
+    <div class="foot-meta">
+      <a href={`${base}rss.xml`} data-cursor>RSS</a>
+      <span>© {year} Tyr · RuneByte</span>
+    </div>
+  </div>
+  <div class="foot-name wrap" aria-hidden="true">
+    RUNEBYTE<span class="dot">.</span>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--line);
+    margin-top: 6rem;
+    padding-block: 3rem 1rem;
+    overflow: hidden;
+  }
+  .foot-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+  }
+  .foot-meta {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--fg-faint);
+    font-family: var(--font-mono);
+  }
+  .foot-meta a {
+    color: var(--fg-dim);
+  }
+  .foot-meta a:hover {
+    color: var(--accent);
+  }
+  .foot-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.6rem, 16vw, 13rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--fg);
+    margin-top: 1.5rem;
+    white-space: nowrap;
+  }
+  .foot-name .dot {
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,186 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPublishedPosts, groupByYear, formatDayMonth, isNote } from '../../lib/posts';
+
+const years = groupByYear(await getPublishedPosts());
+const total = years.reduce((n, y) => n + y.posts.length, 0);
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="归档 · RuneByte" description="全部内容时间线">
+  <section class="wrap archive">
+    <header class="ar-head">
+      <p class="eyebrow">Archive · 归档</p>
+      <h1>归档</h1>
+      <p class="ar-count">共 {total} 篇</p>
+    </header>
+
+    <div class="timeline">
+      {
+        years.map(({ year, posts }) => (
+          <>
+            <div class="tl-year">
+              <span class="ty-num">{year}</span>
+              <span class="tl-node">
+                <span class="ring" />
+              </span>
+              <span class="ty-count">{posts.length} 篇</span>
+            </div>
+            {posts.map((p) => (
+              <a class="tl-row" href={`${base}blog/${p.id}/`} data-cursor>
+                <span class="tl-date">{formatDayMonth(p.data.published)}</span>
+                <span class="tl-node">
+                  <span class="dot" />
+                </span>
+                <span class="tl-title">
+                  {p.data.title}
+                  {isNote(p) && <span class="tl-tag">手记</span>}
+                </span>
+              </a>
+            ))}
+          </>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .archive {
+    padding-top: clamp(3rem, 10vh, 6rem);
+    padding-bottom: 4rem;
+  }
+  .ar-head {
+    margin-bottom: 1.5rem;
+  }
+  .ar-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin-top: 0.3rem;
+  }
+  .ar-count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+    margin-top: 0.4rem;
+  }
+
+  .timeline {
+    position: relative;
+    margin-top: 1rem;
+  }
+  /* 竖线（带上下渐隐） */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 4.8rem;
+    top: 0.8rem;
+    bottom: 0.8rem;
+    width: 1px;
+    transform: translateX(-0.5px);
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--line-strong) 3%,
+      var(--line-strong) 97%,
+      transparent
+    );
+  }
+
+  .tl-year,
+  .tl-row {
+    display: grid;
+    grid-template-columns: 4rem 1.6rem minmax(0, 1fr);
+    align-items: center;
+    position: relative;
+  }
+  .tl-year {
+    margin: 1.6rem 0 0.5rem;
+  }
+  .ty-num {
+    text-align: right;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .ty-count {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+
+  .tl-node {
+    justify-self: center;
+    display: grid;
+    place-items: center;
+  }
+  .ring {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 3px var(--bg);
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--line-strong);
+    box-shadow: 0 0 0 4px var(--bg);
+    transition: background 0.22s var(--ease), transform 0.22s var(--ease);
+  }
+
+  .tl-row {
+    padding: 0.5rem 0;
+  }
+  .tl-date {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--fg-faint);
+    transition: color 0.2s;
+  }
+  .tl-title {
+    padding-left: 0.5rem;
+    color: var(--fg-dim);
+    transition: color 0.2s, padding-left 0.35s var(--ease);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .tl-row:hover .dot {
+    background: var(--accent);
+    transform: scale(1.45);
+  }
+  .tl-row:hover .tl-title {
+    color: var(--fg);
+    padding-left: 0.9rem;
+  }
+  .tl-row:hover .tl-date {
+    color: var(--fg-dim);
+  }
+  .tl-tag {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--accent);
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+  }
+
+  @media (max-width: 520px) {
+    .tl-year,
+    .tl-row {
+      grid-template-columns: 3.2rem 1.4rem minmax(0, 1fr);
+    }
+    .timeline::before {
+      left: 3.9rem;
+    }
+    .ty-num {
+      font-size: 1.4rem;
+    }
+  }
+</style>

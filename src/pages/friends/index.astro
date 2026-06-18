@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import friends from '../../data/friends.json';
+---
+
+<BaseLayout title="友链 · RuneByte" description="一些朋友的站">
+  <section class="wrap friends">
+    <header class="fr-head">
+      <p class="eyebrow">Friends · 友链</p>
+      <h1>友链</h1>
+      <p class="fr-sub">一些值得一看的朋友的站。想交换链接？给我发邮件。</p>
+    </header>
+
+    <ul class="fr-list">
+      {
+        friends.map((f) => (
+          <li class="fr-item">
+            <a href={f.url} target="_blank" rel="noopener" data-cursor>
+              <span class="fr-name">{f.name}</span>
+              <span class="fr-desc">{f.desc}</span>
+              <span class="fr-host">{new URL(f.url).host} ↗</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</BaseLayout>
+
+<style>
+  .friends {
+    padding-top: clamp(3rem, 10vh, 6rem);
+  }
+  .fr-head {
+    margin-bottom: 2.5rem;
+  }
+  .fr-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin: 0.3rem 0 0.6rem;
+  }
+  .fr-sub {
+    color: var(--fg-dim);
+    max-width: 42ch;
+  }
+  .fr-list {
+    list-style: none;
+  }
+  .fr-item a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'name host' 'desc host';
+    gap: 0.2rem 1rem;
+    align-items: center;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding-left 0.4s var(--ease);
+  }
+  .fr-item a:hover {
+    padding-left: 0.6rem;
+  }
+  .fr-name {
+    grid-area: name;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--fg);
+  }
+  .fr-desc {
+    grid-area: desc;
+    font-size: 0.9rem;
+    color: var(--fg-dim);
+  }
+  .fr-host {
+    grid-area: host;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    transition: color 0.2s;
+  }
+  .fr-item a:hover .fr-host {
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,166 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SocialIcons from '../../components/SocialIcons.astro';
+import { profile } from '../../data/profile';
+import { getPublishedPosts, getAllTags } from '../../lib/posts';
+
+const posts = await getPublishedPosts();
+const stats = [
+  { label: '归档', value: posts.length, href: 'archive/' },
+  { label: '分类', value: new Set(posts.map((p) => p.data.category).filter(Boolean)).size, href: 'tags/' },
+  { label: '标签', value: getAllTags(posts).length, href: 'tags/' },
+];
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="关于 · RuneByte" description="关于 Tyr 与 RuneByte">
+  <section class="wrap about">
+    <p class="eyebrow">About · 关于</p>
+
+    <div class="profile">
+      <div class="avatar-wrap">
+        <img class="avatar" src={profile.avatar} alt={profile.name} width="160" height="160" />
+        <span class="fc tl"></span><span class="fc tr"></span>
+        <span class="fc bl"></span><span class="fc br"></span>
+      </div>
+      <div class="ident">
+        <h1 class="name">{profile.name}<span class="dot">.</span></h1>
+        <p class="tagline">{profile.tagline}</p>
+        {profile.taglineSub.map((t) => <p class="tsub">{t}</p>)}
+        <p class="motto">{profile.motto}</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      {
+        stats.map((s) => (
+          <a class="stat" href={`${base}${s.href}`} data-cursor>
+            <span class="sv">{s.value}</span>
+            <span class="sl">{s.label}</span>
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="prose bio">
+      <p>
+        欢迎来到 <strong>RuneByte</strong>。这里记录我的<strong>项目复盘</strong>、技术折腾，和一些日常手记。
+        旧站在 <a href="https://blog.mtcacg.top" target="_blank" rel="noopener">blog.mtcacg.top</a>。
+      </p>
+    </div>
+
+    <div class="contact">
+      <p class="eyebrow">Find me</p>
+      <SocialIcons size={1.5} />
+    </div>
+
+    <a class="back" href={base} data-cursor>← 回首页</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .about {
+    padding-top: clamp(3rem, 10vh, 6rem);
+    padding-bottom: 4rem;
+  }
+  .profile {
+    display: flex;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+    margin: 1.5rem 0 2.5rem;
+    flex-wrap: wrap;
+  }
+  .avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+    padding: 10px;
+  }
+  .avatar {
+    width: clamp(110px, 22vw, 160px);
+    height: clamp(110px, 22vw, 160px);
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--line-strong);
+  }
+  .fc {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--accent);
+  }
+  .fc.tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+  .fc.tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+  .fc.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+  .fc.br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+  .name {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 7vw, 4.5rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .name .dot {
+    color: var(--accent);
+  }
+  .tagline {
+    font-family: var(--font-zh-display);
+    font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+    margin-top: 0.7rem;
+    color: var(--fg);
+  }
+  .tsub {
+    color: var(--fg-dim);
+    margin-top: 0.2rem;
+  }
+  .motto {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--fg-faint);
+    margin-top: 0.9rem;
+    letter-spacing: 0.03em;
+  }
+  .stats {
+    display: flex;
+    gap: clamp(1.5rem, 5vw, 3.5rem);
+    padding: 1.5rem 0;
+    border-block: 1px solid var(--line);
+    margin-bottom: 2.5rem;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .sv {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    color: var(--fg);
+    transition: color 0.2s;
+  }
+  .stat:hover .sv {
+    color: var(--accent);
+  }
+  .sl {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .bio {
+    margin-bottom: 2.5rem;
+  }
+  .contact {
+    margin-bottom: 3rem;
+  }
+  .contact .eyebrow {
+    margin-bottom: 1rem;
+  }
+  .back {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--fg-dim);
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+</style>

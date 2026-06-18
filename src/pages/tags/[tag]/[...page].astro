@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostCard from '../../../components/PostCard.astro';
+import Paginator from '../../../components/Paginator.astro';
+import { getPublishedPosts, getAllTags } from '../../../lib/posts';
+
+export async function getStaticPaths({ paginate }: { paginate: any }) {
+  const posts = await getPublishedPosts();
+  const tags = getAllTags(posts);
+  return tags.flatMap((tag) => {
+    const filtered = posts.filter((p) => p.data.tags.includes(tag));
+    return paginate(filtered, { params: { tag }, props: { tag }, pageSize: 12 });
+  });
+}
+
+const { page, tag } = Astro.props as { page: any; tag: string };
+---
+
+<BaseLayout title={`标签：${tag} · RuneByte`} description={`标签 ${tag} 下的全部内容`}>
+  <section class="wrap tag-archive">
+    <header class="ta-head">
+      <p class="eyebrow">Tag · 标签</p>
+      <h1>#{tag}</h1>
+      <p class="ta-count">{page.total} 篇</p>
+    </header>
+    <div class="list">
+      {page.data.map((post: any) => <PostCard post={post} />)}
+    </div>
+    <Paginator page={page} />
+  </section>
+</BaseLayout>
+
+<style>
+  .tag-archive {
+    padding-top: clamp(3rem, 10vh, 6rem);
+  }
+  .ta-head {
+    margin-bottom: 1.5rem;
+  }
+  .ta-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 3.6rem);
+    letter-spacing: -0.02em;
+    margin-top: 0.3rem;
+  }
+  .ta-count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+    margin-top: 0.4rem;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+  }
+</style>

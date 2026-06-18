@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPublishedPosts, tagsWithCount } from '../../lib/posts';
+
+const tags = tagsWithCount(await getPublishedPosts());
+const base = import.meta.env.BASE_URL;
+const max = Math.max(...tags.map((t) => t.count), 1);
+---
+
+<BaseLayout title="标签 · RuneByte" description="按标签浏览全部内容">
+  <section class="wrap tags-page">
+    <header class="tp-head">
+      <p class="eyebrow">Tags · 标签</p>
+      <h1>标签</h1>
+    </header>
+    <div class="cloud">
+      {
+        tags.map(({ tag, count }) => (
+          <a
+            class="chip"
+            href={`${base}tags/${encodeURIComponent(tag)}/`}
+            data-cursor
+            style={`--w:${0.85 + (count / max) * 0.6}`}
+          >
+            <span class="t">#{tag}</span>
+            <span class="c">{count}</span>
+          </a>
+        ))
+      }
+      {tags.length === 0 && <p class="empty">还没有标签。</p>}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .tags-page {
+    padding-top: clamp(3rem, 10vh, 6rem);
+  }
+  .tp-head {
+    margin-bottom: 2rem;
+  }
+  .tp-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin-top: 0.3rem;
+  }
+  .cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--fg-dim);
+    font-size: calc(0.95rem * var(--w, 1));
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--fg);
+  }
+  .chip .c {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+  .empty {
+    color: var(--fg-faint);
+  }
+</style>
