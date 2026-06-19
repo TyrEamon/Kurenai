@@ -1,0 +1,81 @@
+---
+import { Icon } from 'astro-icon/components';
+import { analytics } from '../data/analytics';
+
+interface Props {
+  slug: string;
+  class?: string;
+}
+
+const { slug } = Astro.props;
+const className = Astro.props.class;
+const umami = analytics.umami;
+const paths = [`/blog/${slug}/`, `/posts/${slug}/`];
+---
+
+{
+  umami.enabled && (
+    <span
+      class:list={['post-stats', className]}
+      data-post-stats
+      data-post-slug={slug}
+      data-post-paths={JSON.stringify(paths)}
+      data-umami-base={umami.baseUrl}
+      data-umami-share={umami.shareId}
+      data-umami-timezone={umami.timezone}
+    >
+      <span class="post-stat" aria-label="访问量">
+        <span class="post-stat-icon" aria-hidden="true"><Icon name="lucide:eye" /></span>
+        <span class="post-stat-value" data-post-stat-value="pageviews">--</span>
+        <span class="post-stat-unit">次</span>
+      </span>
+      <span class="post-stat" aria-label="访客数">
+        <span class="post-stat-icon" aria-hidden="true"><Icon name="lucide:user" /></span>
+        <span class="post-stat-value" data-post-stat-value="visitors">--</span>
+        <span class="post-stat-unit">人</span>
+      </span>
+    </span>
+  )
+}
+
+<style>
+  .post-stats {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--fg-faint);
+  }
+  .post-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    transition: opacity 0.2s;
+  }
+  .post-stats.is-loading .post-stat {
+    opacity: 0.55;
+  }
+  .post-stat-icon {
+    display: inline-flex;
+    color: currentColor;
+    opacity: 0.85;
+  }
+  .post-stat-icon :global(svg) {
+    width: 0.95em;
+    height: 0.95em;
+    stroke-width: 2;
+  }
+  .post-stat-value {
+    min-width: 1ch;
+    color: var(--fg-dim);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .post-stat-unit {
+    color: currentColor;
+  }
+</style>

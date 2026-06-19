@@ -15,6 +15,7 @@ import BackToTop from '../components/BackToTop.astro';
 import RandomCover from '../components/RandomCover.astro';
 import SearchModal from '../components/SearchModal.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
+import { analytics } from '../data/analytics';
 
 interface Props {
   title: string;
@@ -35,6 +36,8 @@ const {
 const htmlLang = lang === 'en' ? 'en' : 'zh-CN';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = image ? new URL(image, Astro.site).href : undefined;
+const umami = analytics.umami;
+const umamiScriptSrc = `${umami.baseUrl}/script.js`;
 ---
 
 <!doctype html>
@@ -45,6 +48,7 @@ const ogImage = image ? new URL(image, Astro.site).href : undefined;
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0a0a0a" />
+    {umami.enabled && <link rel="preconnect" href={umami.baseUrl} />}
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png" />
@@ -59,6 +63,11 @@ const ogImage = image ? new URL(image, Astro.site).href : undefined;
       title="RuneByte"
       href={new URL('rss.xml', Astro.site)}
     />
+    {
+      umami.enabled && (
+        <script defer src={umamiScriptSrc} data-website-id={umami.websiteId}></script>
+      )
+    }
     <!-- 主题防闪烁：首屏前同步应用 -->
     <script is:inline>
       (() => {
@@ -115,5 +124,193 @@ const ogImage = image ? new URL(image, Astro.site).href : undefined;
     <SearchModal />
     <ImageLightbox />
     {intro && <slot name="intro" />}
+    <script>
+      type PostStatKey = 'pageviews' | 'visitors';
+      type PostStatsData = Partial<Record<PostStatKey, number>>;
+      type UmamiShare = { websiteId: string; token: string };
+
+      const postStatKeys: PostStatKey[] = ['pageviews', 'visitors'];
+      const postStatsCacheTTL = 10 * 60 * 1000;
+      const umamiShareCacheTTL = 60 * 60 * 1000;
+      const sharePromises = new Map<string, Promise<UmamiShare>>();
+      const pathStatPromises = new Map<string, Promise<PostStatsData>>();
+
+      function postStatNumber(value: unknown) {
+        if (typeof value === 'number') return value;
+        if (value && typeof value === 'object' && 'value' in value) return Number(value.value) || 0;
+        return 0;
+      }
+
+      function formatPostStat(value: number) {
+        return Number.isFinite(value) ? String(Math.max(0, Math.round(value))) : '--';
+      }
+
+      function getPostStatsCacheKey(block: HTMLElement) {
+        return `runebyte:post-stats:${block.dataset.umamiBase}:${block.dataset.umamiShare}:${block.dataset.postSlug}`;
+      }
+
+      function getUmamiShareCacheKey(baseUrl: string, shareId: string) {
+        return `runebyte:umami-share:${baseUrl}:${shareId}`;
+      }
+
+      function readPostStatsCache(block: HTMLElement): PostStatsData | null {
+        try {
+          const cached = localStorage.getItem(getPostStatsCacheKey(block));
+          if (!cached) return null;
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp > postStatsCacheTTL) return null;
+          return parsed.value;
+        } catch {
+          localStorage.removeItem(getPostStatsCacheKey(block));
+          return null;
+        }
+      }
+
+      function writePostStatsCache(block: HTMLElement, stats: PostStatsData) {
+        try {
+          localStorage.setItem(getPostStatsCacheKey(block), JSON.stringify({ timestamp: Date.now(), value: stats }));
+        } catch {}
+      }
+
+      function renderPostStats(block: HTMLElement, stats: PostStatsData, animate = true) {
+        postStatKeys.forEach((key) => {
+          const target = block.querySelector<HTMLElement>(`[data-post-stat-value="${key}"]`);
+          if (!target) return;
+          const value = Number(stats[key] || 0);
+          if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            target.textContent = formatPostStat(value);
+            return;
+          }
+          const startText = target.textContent?.replace(/[^\d]/g, '') || '0';
+          const start = Number.parseInt(startText, 10) || 0;
+          if (start === value) {
+            target.textContent = formatPostStat(value);
+            return;
+          }
+          const duration = 620;
+          const startedAt = performance.now();
+          const tick = (now: number) => {
+            const progress = Math.min(1, (now - startedAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            target.textContent = formatPostStat(start + (value - start) * eased);
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      }
+
+      function getCachedUmamiShare(baseUrl: string, shareId: string, forceRefresh = false): Promise<UmamiShare> {
+        const cacheKey = getUmamiShareCacheKey(baseUrl, shareId);
+        const promiseKey = `${cacheKey}:${forceRefresh ? 'fresh' : 'cached'}`;
+        if (sharePromises.has(promiseKey)) return sharePromises.get(promiseKey)!;
+        const promise = (async () => {
+          try {
+            if (forceRefresh) localStorage.removeItem(cacheKey);
+            else {
+              const cached = localStorage.getItem(cacheKey);
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Date.now() - parsed.timestamp < umamiShareCacheTTL) return parsed.value;
+              }
+            }
+          } catch {
+            localStorage.removeItem(cacheKey);
+          }
+          const response = await fetch(`${baseUrl}/api/share/${shareId}`);
+          if (!response.ok) throw new Error('Failed to load Umami share token');
+          const value = await response.json();
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), value }));
+          } catch {}
+          return value;
+        })();
+        sharePromises.set(promiseKey, promise);
+        promise.catch(() => sharePromises.delete(promiseKey));
+        return promise;
+      }
+
+      async function fetchPathStats(block: HTMLElement, path: string, retry = false): Promise<PostStatsData> {
+        const baseUrl = block.dataset.umamiBase;
+        const shareId = block.dataset.umamiShare;
+        if (!baseUrl || !shareId) return {};
+        const cacheKey = `${baseUrl}:${shareId}:${path}:${retry ? 'retry' : 'once'}`;
+        if (pathStatPromises.has(cacheKey)) return pathStatPromises.get(cacheKey)!;
+        const promise = (async () => {
+          const { websiteId, token } = await getCachedUmamiShare(baseUrl, shareId, retry);
+          const query = new URLSearchParams({
+            startAt: '0',
+            endAt: String(Date.now()),
+            unit: 'hour',
+            timezone: block.dataset.umamiTimezone || 'Asia/Shanghai',
+            path: `eq.${path}`,
+          });
+          const response = await fetch(`${baseUrl}/api/websites/${websiteId}/stats?${query}`, {
+            headers: {
+              'x-umami-share-token': token,
+              'x-umami-share-context': '1',
+            },
+          });
+          if (response.status === 401 && !retry) return fetchPathStats(block, path, true);
+          if (!response.ok) throw new Error('Failed to load Umami post stats');
+          const stats = await response.json();
+          return {
+            pageviews: postStatNumber(stats.pageviews),
+            visitors: postStatNumber(stats.visitors),
+          };
+        })();
+        pathStatPromises.set(cacheKey, promise);
+        promise.catch(() => pathStatPromises.delete(cacheKey));
+        return promise;
+      }
+
+      function pathsFromBlock(block: HTMLElement) {
+        try {
+          const parsed = JSON.parse(block.dataset.postPaths || '[]');
+          return Array.isArray(parsed) ? parsed.filter((path) => typeof path === 'string') : [];
+        } catch {
+          return [];
+        }
+      }
+
+      async function fetchPostStats(block: HTMLElement): Promise<PostStatsData> {
+        const results = await Promise.allSettled(pathsFromBlock(block).map((path) => fetchPathStats(block, path)));
+        return results.reduce<PostStatsData>(
+          (sum, result) => {
+            if (result.status !== 'fulfilled') return sum;
+            return {
+              pageviews: (sum.pageviews || 0) + (result.value.pageviews || 0),
+              visitors: (sum.visitors || 0) + (result.value.visitors || 0),
+            };
+          },
+          { pageviews: 0, visitors: 0 },
+        );
+      }
+
+      function initPostStats() {
+        document.querySelectorAll<HTMLElement>('[data-post-stats]').forEach((block) => {
+          if (block.dataset.loaded === '1') return;
+          block.dataset.loaded = '1';
+          const cachedStats = readPostStatsCache(block);
+          if (cachedStats) renderPostStats(block, cachedStats, false);
+          if (!cachedStats) block.classList.add('is-loading');
+          fetchPostStats(block)
+            .then((stats) => {
+              writePostStatsCache(block, stats);
+              renderPostStats(block, stats, true);
+            })
+            .catch(() => {
+              if (!cachedStats) renderPostStats(block, { pageviews: 0, visitors: 0 }, false);
+            })
+            .finally(() => block.classList.remove('is-loading'));
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPostStats, { once: true });
+      } else {
+        initPostStats();
+      }
+      document.addEventListener('astro:page-load', initPostStats);
+    </script>
   </body>
 </html>

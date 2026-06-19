@@ -1,5 +1,6 @@
 ---
 import type { Post } from '../lib/posts';
+import PostStats from './PostStats.astro';
 import {
   coverTransitionName,
   formatMonthYear,
@@ -51,6 +52,7 @@ const words = formatCount(wordCount(post.body, post.data.lang));
     </div>
     <h3 class="item-title">{post.data.title}</h3>
     {post.data.description && <p class="item-desc">{post.data.description}</p>}
+    <PostStats slug={post.id} class="item-stats" />
     {
       post.data.tags.length > 0 && (
         <div class="item-tags">
@@ -182,30 +184,58 @@ const words = formatCount(wordCount(post.body, post.data.lang));
     font-size: 0.7rem;
     color: var(--fg-faint);
   }
-  /* 右侧 hover 浮出的封面预览 */
+  /* 右侧 hover 浮出的封面预览（从中缝「撕开」揭示，呼应首页 Hero） */
   .item-preview {
     position: absolute;
     right: 1rem;
     top: 50%;
-    width: 190px;
-    height: 118px;
-    transform: translateY(-50%) scale(0.92);
+    width: 208px;
+    height: 132px;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
     z-index: 3;
     border: 1px solid var(--line-strong);
     border-radius: 4px;
     overflow: hidden;
-    transition: opacity 0.35s var(--ease), transform 0.45s var(--ease);
+    /* 入场前：从水平中缝合上（裂口闭合）+ 透明 */
+    clip-path: inset(50% 0 50% 0);
+    transition: clip-path 0.85s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease-out;
   }
   .item:hover .item-preview {
     opacity: 1;
-    transform: translateY(-50%) scale(1);
+    /* 裂口上下撑开，露出整张封面 */
+    clip-path: inset(0 0 0 0);
   }
   .item-preview img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  /* 裂口处的一道极细红线，撕开瞬间闪现后淡出 */
+  .item-preview::after {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.9;
+    transform: translateY(-50%) scaleX(1);
+    transition: opacity 0.5s ease-out, transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .item:hover .item-preview::after {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .item-preview {
+      clip-path: inset(0 0 0 0);
+    }
+    .item-preview::after {
+      display: none;
+    }
   }
   @media (max-width: 760px) {
     .item-preview {

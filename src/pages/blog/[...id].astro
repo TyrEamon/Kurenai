@@ -7,6 +7,7 @@ import ContentReveal from '../../components/ContentReveal.astro';
 import CodeCopy from '../../components/CodeCopy.astro';
 import LegacyEmbeds from '../../components/LegacyEmbeds.astro';
 import ArticleAfterword from '../../components/ArticleAfterword.astro';
+import PostStats from '../../components/PostStats.astro';
 import {
   getPublishedPosts,
   coverTransitionName,
@@ -67,6 +68,7 @@ const randomCover = isRandomCover(post.data.image);
             </span>
           )
         }
+        <PostStats slug={post.id} class="art-stats" />
       </div>
 
       <div hidden>

@@ -1,8 +1,10 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
 import WordmarkRoll from './WordmarkRoll.astro';
+import { Icon } from 'astro-icon/components';
 const base = import.meta.env.BASE_URL;
-const nav = [
+type NavItem = { label: string; href?: string; external?: boolean; children?: NavItem[] };
+const nav: NavItem[] = [
   { href: `${base}blog/`, label: '文章' },
   { href: `${base}notes/`, label: '手记' },
   { href: `${base}tags/`, label: '标签' },
@@ -10,8 +12,18 @@ const nav = [
   { href: `${base}gallery/`, label: '图集' },
   { href: `${base}friends/`, label: '友链' },
   { href: `${base}about/`, label: '关于' },
+  { href: 'https://u.mtcacg.top/share/C8gWpSlbh6hrKEUL', label: '统计', external: true },
+  {
+    label: '资源',
+    children: [
+      { href: 'https://www.6858686.xyz/', label: '网页导航', external: true },
+      { href: 'https://b.0106010.xyz', label: '图站', external: true },
+      { href: 'https://proxylink.mtcacg.top', label: 'CFW 面板', external: true },
+    ],
+  },
 ];
 const path = Astro.url.pathname;
+const isActive = (item: NavItem) => !item.external && !item.children && path === item.href;
 ---
 
 <header class="site-header">
@@ -21,15 +33,43 @@ const path = Astro.url.pathname;
     </a>
     <nav class="nav" aria-label="主导航">
       {
-        nav.map((item) => (
-          <a
-            href={item.href}
-            data-cursor
-            class:list={['nav-link', { active: path === item.href }]}
-          >
-            {item.label}
-          </a>
-        ))
+        nav.map((item) =>
+          item.children ? (
+            <div class="nav-dropdown">
+              <button type="button" class="nav-link nav-trigger" data-cursor aria-haspopup="true">
+                {item.label}
+                <Icon class="nav-chevron" name="lucide:chevron-down" />
+              </button>
+              <div class="nav-dropdown-menu">
+                <div class="nav-dropdown-panel">
+                  {item.children.map((child) => (
+                    <a
+                      class="nav-drop-link"
+                      href={child.href}
+                      data-cursor
+                      target={child.external ? '_blank' : undefined}
+                      rel={child.external ? 'noopener noreferrer' : undefined}
+                    >
+                      {child.label}
+                      {child.external && <Icon class="nav-ext" name="lucide:arrow-up-right" />}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <a
+              href={item.href}
+              data-cursor
+              target={item.external ? '_blank' : undefined}
+              rel={item.external ? 'noopener noreferrer' : undefined}
+              class:list={['nav-link', { active: isActive(item) }]}
+            >
+              {item.label}
+              {item.external && <Icon class="nav-ext" name="lucide:arrow-up-right" />}
+            </a>
+          )
+        )
       }
     </nav>
     <div class="actions">
@@ -40,6 +80,11 @@ const path = Astro.url.pathname;
         </svg>
       </button>
       <ThemeToggle />
+      <a class="icon-btn travel-link" href="https://blog.mtcacg.top" target="_blank" rel="noopener noreferrer" data-cursor aria-label="前往旧博客（Travel）" title="Travel · 旧博客">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path d="M17.2 20l1.8 1.5v.5H5v-.5L6.8 20H5a2 2 0 0 1-2-2V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v11a2 2 0 0 1-2 2h-1.8zM7 5a2 2 0 0 0-2 2v11h14V7a2 2 0 0 0-2-2H7zm5 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM6 7h12v4H6V7z" />
+        </svg>
+      </a>
       <button class="icon-btn menu-toggle" type="button" data-cursor aria-label="打开导航菜单" aria-controls="mobile-nav-panel" aria-expanded="false">
         <svg class="menu-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line class="menu-line menu-line-top" x1="5" y1="7" x2="19" y2="7" />
@@ -51,15 +96,47 @@ const path = Astro.url.pathname;
   </div>
   <nav id="mobile-nav-panel" class="mobile-nav" aria-label="移动端导航" hidden>
     {
-      nav.map((item) => (
-        <a
-          href={item.href}
-          data-cursor
-          class:list={['mobile-nav-link', { active: path === item.href }]}
-        >
-          {item.label}
-        </a>
-      ))
+      nav.map((item) =>
+        item.children ? (
+          <div class="mnav-group" data-mnav-group>
+            <button
+              type="button"
+              class="mobile-nav-link mnav-toggle"
+              data-cursor
+              data-mnav-toggle
+              aria-expanded="false"
+            >
+              {item.label}
+              <Icon class="mnav-chevron" name="lucide:chevron-down" />
+            </button>
+            <div class="mnav-sub" data-mnav-sub hidden>
+              {item.children.map((child) => (
+                <a
+                  class="mnav-sublink"
+                  href={child.href}
+                  data-cursor
+                  target={child.external ? '_blank' : undefined}
+                  rel={child.external ? 'noopener noreferrer' : undefined}
+                >
+                  {child.label}
+                  {child.external && <Icon class="nav-ext" name="lucide:arrow-up-right" />}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <a
+            href={item.href}
+            data-cursor
+            target={item.external ? '_blank' : undefined}
+            rel={item.external ? 'noopener noreferrer' : undefined}
+            class:list={['mobile-nav-link', { active: isActive(item) }]}
+          >
+            {item.label}
+            {item.external && <Icon class="nav-ext" name="lucide:arrow-up-right" />}
+          </a>
+        )
+      )
     }
   </nav>
 </header>
@@ -131,6 +208,91 @@ const path = Astro.url.pathname;
   .nav-link.active::after {
     transform: scaleX(1);
   }
+  /* 外链小箭头 */
+  .nav-ext {
+    width: 0.72em;
+    height: 0.72em;
+    margin-left: 0.18em;
+    vertical-align: -0.04em;
+    opacity: 0.55;
+  }
+  /* 资源下拉（桌面纯 CSS：hover / focus-within 展开） */
+  .nav-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18rem;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+  .nav-chevron {
+    width: 0.82em;
+    height: 0.82em;
+    color: var(--fg-faint);
+    transition: transform 0.28s var(--ease), color 0.2s;
+  }
+  .nav-dropdown {
+    position: relative;
+    display: inline-flex;
+  }
+  .nav-dropdown:hover .nav-trigger,
+  .nav-dropdown:focus-within .nav-trigger {
+    color: var(--fg);
+  }
+  .nav-dropdown:hover .nav-chevron,
+  .nav-dropdown:focus-within .nav-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  .nav-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    padding-top: 0.6rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.22s var(--ease), transform 0.22s var(--ease), visibility 0.22s;
+    z-index: 60;
+  }
+  .nav-dropdown:hover .nav-dropdown-menu,
+  .nav-dropdown:focus-within .nav-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .nav-dropdown-panel {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 9rem;
+    padding: 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(16px);
+  }
+  [data-theme='light'] .nav-dropdown-panel {
+    box-shadow: 0 18px 46px rgba(22, 19, 15, 0.14);
+  }
+  .nav-drop-link {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.42rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--fg-dim);
+    white-space: nowrap;
+    transition: color 0.2s, background 0.2s;
+  }
+  .nav-drop-link:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--fg) 6%, transparent);
+  }
   .actions {
     display: flex;
     align-items: center;
@@ -183,19 +345,100 @@ const path = Astro.url.pathname;
     display: none;
   }
   .mobile-nav-link {
+    position: relative;
     display: flex;
-    align-items: center;
-    min-height: 2.4rem;
-    padding: 0.48rem 0.7rem;
-    border-radius: 6px;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.4rem 0.2rem 0.4rem 0.55rem;
     color: var(--fg-dim);
-    font-size: 0.94rem;
-    transition: color 0.2s, background 0.2s;
+    font-family: var(--font-zh-display);
+    font-size: 1.02rem;
+    letter-spacing: 0.02em;
+    transition: color 0.22s var(--ease), padding-left 0.28s var(--ease);
+  }
+  /* mono 序号前缀（01 02 …），随项自动编号 */
+  .mobile-nav-link::before {
+    counter-increment: mnav;
+    content: counter(mnav, decimal-leading-zero);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    color: var(--fg-faint);
+    transition: color 0.22s;
+  }
+  /* 左缘红条：hover/当前页生长 */
+  .mobile-nav-link::after {
+    content: '';
+    position: absolute;
+    left: -0.55rem;
+    top: 50%;
+    width: 2px;
+    height: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: translateY(-50%);
+    transition: height 0.28s var(--ease);
   }
   .mobile-nav-link:hover,
   .mobile-nav-link.active {
     color: var(--fg);
-    background: color-mix(in srgb, var(--fg) 7%, transparent);
+    padding-left: 0.85rem;
+  }
+  .mobile-nav-link:hover::before,
+  .mobile-nav-link.active::before {
+    color: var(--accent);
+  }
+  .mobile-nav-link:hover::after,
+  .mobile-nav-link.active::after {
+    height: 1.05rem;
+  }
+  /* 资源分组（手机：按钮点击手风琴展开） */
+  .mnav-toggle {
+    width: 100%;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .mnav-chevron {
+    width: 0.9em;
+    height: 0.9em;
+    margin-left: auto;
+    color: var(--fg-faint);
+    align-self: center;
+    transition: transform 0.28s var(--ease), color 0.2s;
+  }
+  .mnav-toggle[aria-expanded='true'] .mnav-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  .mnav-sub {
+    display: grid;
+    gap: 0.05rem;
+    margin: 0.1rem 0 0.15rem 1.15rem;
+    padding-left: 0.55rem;
+    border-left: 1px solid var(--line);
+  }
+  .mnav-sub[hidden] {
+    display: none;
+  }
+  .mnav-sublink {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.34rem 0.2rem;
+    font-size: 0.9rem;
+    color: var(--fg-dim);
+    min-width: 0;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+  .mnav-sublink::before {
+    content: '–';
+    color: var(--fg-faint);
+  }
+  .mnav-sublink:hover {
+    color: var(--accent);
   }
   @media (max-width: 600px) {
     .header-inner {
@@ -217,16 +460,44 @@ const path = Astro.url.pathname;
       right: var(--pad);
       z-index: 2;
       display: grid;
-      width: min(13rem, calc(100vw - var(--pad) * 2));
-      padding: 0.45rem;
+      gap: 0.05rem;
+      counter-reset: mnav;
+      width: min(11.4rem, calc(100vw - var(--pad) * 2));
+      padding: 0.85rem 1rem 0.9rem 0.95rem;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
       box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
       backdrop-filter: blur(16px);
     }
     [data-theme='light'] .mobile-nav:not([hidden]) {
       box-shadow: 0 18px 46px rgba(22, 19, 15, 0.14);
+    }
+    /* 逐项级联滑入 */
+    @media (prefers-reduced-motion: no-preference) {
+      .mobile-nav:not([hidden]) > * {
+        opacity: 0;
+        animation: mnavIn 0.34s var(--ease) forwards;
+      }
+      .mobile-nav:not([hidden]) > *:nth-child(1) { animation-delay: 0.03s; }
+      .mobile-nav:not([hidden]) > *:nth-child(2) { animation-delay: 0.06s; }
+      .mobile-nav:not([hidden]) > *:nth-child(3) { animation-delay: 0.09s; }
+      .mobile-nav:not([hidden]) > *:nth-child(4) { animation-delay: 0.12s; }
+      .mobile-nav:not([hidden]) > *:nth-child(5) { animation-delay: 0.15s; }
+      .mobile-nav:not([hidden]) > *:nth-child(6) { animation-delay: 0.18s; }
+      .mobile-nav:not([hidden]) > *:nth-child(7) { animation-delay: 0.21s; }
+      .mobile-nav:not([hidden]) > *:nth-child(8) { animation-delay: 0.24s; }
+      .mobile-nav:not([hidden]) > *:nth-child(9) { animation-delay: 0.27s; }
+    }
+    @keyframes mnavIn {
+      from {
+        opacity: 0;
+        transform: translateX(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -237,6 +508,13 @@ const path = Astro.url.pathname;
 </style>
 
 <script>
+  function collapseMobileGroups() {
+    document.querySelectorAll<HTMLElement>('#mobile-nav-panel [data-mnav-group]').forEach((group) => {
+      group.querySelector<HTMLElement>('[data-mnav-sub]')?.setAttribute('hidden', '');
+      group.querySelector<HTMLElement>('[data-mnav-toggle]')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
   function setMobileNav(open: boolean) {
     const btn = document.querySelector<HTMLButtonElement>('.menu-toggle');
     const panel = document.getElementById('mobile-nav-panel');
@@ -245,6 +523,7 @@ const path = Astro.url.pathname;
     btn.setAttribute('aria-expanded', String(open));
     btn.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
     panel.hidden = !open;
+    if (!open) collapseMobileGroups();
   }
 
   function bindMobileNav() {
@@ -260,7 +539,23 @@ const path = Astro.url.pathname;
         setMobileNav(toggle.getAttribute('aria-expanded') !== 'true');
         return;
       }
-      if (target.closest('.mobile-nav-link')) {
+      // 资源分组：点击展开/收起，且同一时间只开一组
+      const subToggle = target.closest<HTMLButtonElement>('[data-mnav-toggle]');
+      const panel = document.getElementById('mobile-nav-panel');
+      if (subToggle && panel?.contains(subToggle)) {
+        event.preventDefault();
+        const group = subToggle.closest<HTMLElement>('[data-mnav-group]');
+        const sub = group?.querySelector<HTMLElement>('[data-mnav-sub]');
+        const willOpen = !!sub?.hidden;
+        collapseMobileGroups();
+        if (willOpen && sub) {
+          sub.hidden = false;
+          subToggle.setAttribute('aria-expanded', 'true');
+        }
+        return;
+      }
+      // 点任意导航链接（含子链接）→ 收起整个菜单
+      if (target.closest('#mobile-nav-panel a')) {
         setMobileNav(false);
         return;
       }

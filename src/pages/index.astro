@@ -4,17 +4,23 @@ import IntroAnimation from '../components/IntroAnimation.astro';
 import HeroStreams from '../components/HeroStreams.astro';
 import PostCard from '../components/PostCard.astro';
 import SocialIcons from '../components/SocialIcons.astro';
+import { analytics } from '../data/analytics';
 import { profile } from '../data/profile';
-import { getArticles, getPublishedPosts, getAllTags } from '../lib/posts';
+import { getArticles, getPublishedPosts, getAllTags, wordCount } from '../lib/posts';
 
 const articles = await getArticles();
 const all = await getPublishedPosts();
 const feed = articles;
-const stats = [
-  { label: '归档', value: all.length, href: 'archive/' },
-  { label: '分类', value: new Set(all.map((p) => p.data.category).filter(Boolean)).size, href: 'tags/' },
-  { label: '标签', value: getAllTags(all).length, href: 'tags/' },
+const totalWords = all.reduce((sum, post) => sum + wordCount(post.body, post.data.lang), 0);
+const formatWan = (n: number) =>
+  n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}w` : String(n);
+// 导航类统计（可点击）：归档=文章数。
+const navStats = [
+  { label: '归档', value: String(all.length), href: 'archive/' },
+  { label: '分类', value: String(new Set(all.map((p) => p.data.category).filter(Boolean)).size), href: 'tags/' },
+  { label: '标签', value: String(getAllTags(all).length), href: 'tags/' },
 ];
+const umami = analytics.umami;
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -45,22 +51,41 @@ const base = import.meta.env.BASE_URL;
     <aside class="profile-card" data-reveal>
       <img class="pc-avatar" src={profile.avatar} alt={profile.name} width="84" height="84" />
       <div class="pc-name">RuneByte<span class="dot">.</span></div>
-      <div class="pc-by">{profile.name} · Experiments and Reviews</div>
+      <div class="pc-by">{profile.name}</div>
       <div class="pc-bio">
         <p class="pc-bio-main">{profile.tagline}</p>
-        {profile.taglineSub.map((t) => <p>{t}</p>)}
+        {profile.taglineSub.map((t) => <p class="pc-bio-sub">{t}</p>)}
       </div>
       <div class="pc-rule"></div>
       <p class="pc-motto">{profile.motto}</p>
-      <div class="pc-stats">
+      <div
+        class="pc-stats"
+        data-site-stats
+        data-umami-enabled={String(umami.enabled)}
+        data-umami-base={umami.baseUrl}
+        data-umami-share={umami.shareId}
+        data-umami-timezone={umami.timezone}
+      >
         {
-          stats.map((s) => (
+          navStats.map((s) => (
             <a class="pc-stat" href={`${base}${s.href}`} data-cursor>
               <span class="sv">{s.value}</span>
               <span class="sl">{s.label}</span>
             </a>
           ))
         }
+        <div class="pc-stat">
+          <span class="sv">{formatWan(totalWords)}</span>
+          <span class="sl">字数</span>
+        </div>
+        <div class="pc-stat is-remote">
+          <span class="sv" data-stat-value="pageviews">--</span>
+          <span class="sl">访问</span>
+        </div>
+        <div class="pc-stat is-remote">
+          <span class="sv" data-stat-value="visitors">--</span>
+          <span class="sl">访客</span>
+        </div>
       </div>
       <div class="pc-social">
         <SocialIcons size={1.35} />
@@ -292,60 +317,98 @@ const base = import.meta.env.BASE_URL;
     color: var(--accent);
   }
   .pc-by {
-    font-size: 0.9rem;
-    color: var(--fg-dim);
-    margin-top: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: var(--fg-faint);
+    margin-top: 0.35rem;
   }
   .pc-bio {
-    margin-top: 0.9rem;
-    font-size: 0.92rem;
-    line-height: 1.6;
-    color: var(--fg-dim);
+    position: relative;
+    margin-top: 1.15rem;
+    padding-left: 0.95rem;
+  }
+  /* 主句左侧渐隐强调竖条 */
+  .pc-bio::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, var(--accent), transparent 85%);
   }
   .pc-bio-main {
     font-family: var(--font-zh-display);
+    font-size: 1.04rem;
+    line-height: 1.5;
     color: var(--fg);
   }
-  .pc-bio p:last-child {
+  .pc-bio-sub {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+  .pc-bio-sub:first-of-type {
+    margin-top: 0.22rem;
+  }
+  /* 颜文字一行单独拎出来、轻点红 */
+  .pc-bio-sub:last-child {
     margin-top: 0.6rem;
+    color: color-mix(in srgb, var(--accent) 50%, var(--fg-dim));
   }
   .pc-rule {
     border-top: 1px solid var(--line);
-    margin: 1rem 0 0.8rem;
-    max-width: 12rem;
+    margin: 1.2rem 0 0.85rem;
+    max-width: 11rem;
   }
   .pc-motto {
     font-family: var(--font-mono);
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     color: var(--fg-faint);
     letter-spacing: 0.02em;
   }
+  /* 格言作「注释式签名」收尾 */
+  .pc-motto::before {
+    content: '// ';
+    color: color-mix(in srgb, var(--accent) 60%, var(--fg-faint));
+  }
   .pc-stats {
-    display: flex;
-    justify-content: flex-start;
-    gap: 1.6rem;
-    margin: 1.3rem 0;
-    padding: 1rem 0;
-    border-block: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 0.6rem;
+    margin: 1.4rem 0;
+    border-top: 1px solid var(--line);
   }
   .pc-stat {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.22rem;
+    padding: 0.62rem 0;
+  }
+  .pc-stat:nth-child(n + 4) {
+    border-top: 1px solid var(--line);
   }
   .pc-stat .sv {
     font-family: var(--font-display);
-    font-size: 1.55rem;
+    font-size: 1.42rem;
+    font-weight: 700;
     color: var(--fg);
-    transition: color 0.2s;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    transition: color 0.2s, opacity 0.2s;
   }
-  .pc-stat:hover .sv {
+  .pc-stat.is-loading .sv {
+    opacity: 0.45;
+  }
+  a.pc-stat:hover .sv {
     color: var(--accent);
   }
   .pc-stat .sl {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
     color: var(--fg-faint);
   }
   .pc-social {
@@ -387,6 +450,21 @@ const base = import.meta.env.BASE_URL;
       font-size: clamp(0.98rem, 4.1vw, 1.12rem);
       line-height: 1.72;
     }
+    /* 小字号下色带更薄 → 加高加浓，补回桌面端的高亮存在感 */
+    .hero-quote em {
+      background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--accent) 26%, transparent) 0 0.52em,
+        transparent 0.52em
+      );
+    }
+    .hero-quote strong em {
+      background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--accent) 32%, transparent) 0 0.58em,
+        transparent 0.58em
+      );
+    }
     .hero-bg::after {
       display: none;
     }
@@ -416,6 +494,144 @@ const base = import.meta.env.BASE_URL;
   let off: (() => void) | null = null;
   let quoteTimer: number | null = null;
   let quoteRunId = 0;
+  type SiteStatKey = 'pageviews' | 'visitors';
+  type SiteStats = Partial<Record<SiteStatKey, number>>;
+  const siteStatKeys: SiteStatKey[] = ['pageviews', 'visitors'];
+  const siteStatsCacheTTL = 10 * 60 * 1000;
+
+  function formatSiteStat(value: number) {
+    return Number.isFinite(value) ? String(Math.max(0, Math.round(value))) : '--';
+  }
+
+  function animateStatValue(el: HTMLElement, end: number) {
+    const startText = el.textContent?.replace(/[^\d]/g, '') || '0';
+    const start = Number.parseInt(startText, 10) || 0;
+    if (!Number.isFinite(end) || start === end || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = formatSiteStat(end);
+      return;
+    }
+    const duration = 760;
+    const startedAt = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = formatSiteStat(start + (end - start) * eased);
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function getSiteStatsCacheKey(block: HTMLElement) {
+    return `runebyte:site-stats:${block.dataset.umamiBase}:${block.dataset.umamiShare}:${
+      block.dataset.umamiTimezone || 'Asia/Shanghai'
+    }`;
+  }
+
+  function readCachedSiteStats(block: HTMLElement): SiteStats | null {
+    try {
+      const cached = localStorage.getItem(getSiteStatsCacheKey(block));
+      if (!cached) return null;
+      const parsed = JSON.parse(cached);
+      if (Date.now() - parsed.timestamp > siteStatsCacheTTL) return null;
+      return parsed.value;
+    } catch {
+      localStorage.removeItem(getSiteStatsCacheKey(block));
+      return null;
+    }
+  }
+
+  function writeCachedSiteStats(block: HTMLElement, stats: SiteStats) {
+    try {
+      localStorage.setItem(getSiteStatsCacheKey(block), JSON.stringify({ timestamp: Date.now(), value: stats }));
+    } catch {}
+  }
+
+  function renderSiteStats(block: HTMLElement, stats: SiteStats, animate = true) {
+    siteStatKeys.forEach((key) => {
+      const target = block.querySelector<HTMLElement>(`[data-stat-value="${key}"]`);
+      if (!target) return;
+      const value = Number(stats[key] || 0);
+      if (animate) animateStatValue(target, value);
+      else target.textContent = formatSiteStat(value);
+    });
+  }
+
+  function getUmamiShareCacheKey(baseUrl: string, shareId: string) {
+    return `runebyte:umami-share:${baseUrl}:${shareId}`;
+  }
+
+  async function getUmamiShare(baseUrl: string, shareId: string, forceRefresh = false) {
+    const cacheKey = getUmamiShareCacheKey(baseUrl, shareId);
+    const cacheTTL = 60 * 60 * 1000;
+    try {
+      if (forceRefresh) localStorage.removeItem(cacheKey);
+      else {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp < cacheTTL) return parsed.value;
+        }
+      }
+    } catch {
+      localStorage.removeItem(cacheKey);
+    }
+    const response = await fetch(`${baseUrl}/api/share/${shareId}`);
+    if (!response.ok) throw new Error('Failed to load Umami share token');
+    const value = await response.json();
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), value }));
+    } catch {}
+    return value;
+  }
+
+  async function fetchSiteStats(block: HTMLElement, retry = false) {
+    const baseUrl = block.dataset.umamiBase;
+    const shareId = block.dataset.umamiShare;
+    if (block.dataset.umamiEnabled !== 'true' || !baseUrl || !shareId) return null;
+    const query = new URLSearchParams({
+      startAt: '0',
+      endAt: String(Date.now()),
+      unit: 'hour',
+      timezone: block.dataset.umamiTimezone || 'Asia/Shanghai',
+    });
+    const { websiteId, token } = await getUmamiShare(baseUrl, shareId, retry);
+    const response = await fetch(`${baseUrl}/api/websites/${websiteId}/stats?${query}`, {
+      headers: {
+        'x-umami-share-token': token,
+        'x-umami-share-context': '1',
+      },
+    });
+    if (response.status === 401 && !retry) return fetchSiteStats(block, true);
+    if (!response.ok) throw new Error('Failed to load Umami stats');
+    return response.json();
+  }
+
+  function initSiteStats() {
+    const block = document.querySelector<HTMLElement>('[data-site-stats]');
+    if (!block || block.dataset.loaded === '1') return;
+    block.dataset.loaded = '1';
+    const cachedStats = readCachedSiteStats(block);
+    if (cachedStats) renderSiteStats(block, cachedStats, false);
+    if (!cachedStats) {
+      block.querySelectorAll<HTMLElement>('.is-remote').forEach((item) => item.classList.add('is-loading'));
+    }
+    fetchSiteStats(block)
+      .then((stats) => {
+        if (!stats) return;
+        writeCachedSiteStats(block, stats);
+        renderSiteStats(block, stats, true);
+      })
+      .catch(() => {
+        if (!cachedStats) {
+          block.querySelectorAll<HTMLElement>('[data-stat-value]').forEach((target) => {
+            target.textContent = '--';
+          });
+        }
+      })
+      .finally(() => {
+        block.querySelectorAll<HTMLElement>('.is-remote').forEach((item) => item.classList.remove('is-loading'));
+      });
+  }
  
   function resetQuoteTyping() {
     if (quoteTimer) clearTimeout(quoteTimer);
@@ -494,6 +710,7 @@ const base = import.meta.env.BASE_URL;
   function initHero() {
     off?.();
     off = null;
+    initSiteStats();
     const inner = document.querySelector<HTMLElement>('.hero .wrap');
     const target = document.getElementById('enter');
     if (!inner) return;
@@ -602,6 +819,11 @@ const base = import.meta.env.BASE_URL;
       cue?.removeEventListener('click', onCue);
       stopReveal?.();
     };
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSiteStats, { once: true });
+  } else {
+    initSiteStats();
   }
   document.addEventListener('astro:page-load', initHero);
   document.addEventListener('astro:before-swap', () => {

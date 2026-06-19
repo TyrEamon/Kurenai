@@ -2,11 +2,19 @@
   {
     "name": "示例朋友 A",
     "url": "https://example.com",
-    "desc": "一句话介绍这位朋友的站。"
+    "desc": "一句话介绍这位朋友的站。",
+    "tag": "前端"
   },
   {
     "name": "示例朋友 B",
     "url": "https://example.org",
-    "desc": "折腾爱好者 / 前端 / 摄影。"
+    "desc": "折腾爱好者 / 前端 / 摄影。",
+    "tag": "折腾"
+  },
+  {
+    "name": "示例朋友 C",
+    "url": "https://example.net",
+    "desc": "写点技术，也写点生活。",
+    "tag": "生活"
   }
 ]

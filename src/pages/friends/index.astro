@@ -1,24 +1,58 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import friends from '../../data/friends.json';
+import { profile } from '../../data/profile';
+
+const mail = profile.socials.find((s) => s.url.startsWith('mailto:'))?.url ?? 'mailto:tyreamon@gmail.com';
+
+// 取首字符做字母牌兜底（无 avatar 时）
+const list = friends.map((f, i) => ({
+  ...f,
+  host: new URL(f.url).host.replace(/^www\./, ''),
+  mono: (f.name.trim()[0] ?? '·').toUpperCase(),
+  no: String(i + 1).padStart(2, '0'),
+}));
+const count = String(list.length).padStart(2, '0');
 ---
 
-<BaseLayout title="友链 · RuneByte" description="一些朋友的站">
+<BaseLayout title="友链 · RuneByte" description="一些值得一看的朋友的站 · 灰度名录，悬停复色">
   <section class="wrap friends">
-    <header class="fr-head">
+    <header class="fr-head" data-reveal>
       <p class="eyebrow">Friends · 友链</p>
       <h1>友链</h1>
-      <p class="fr-sub">一些值得一看的朋友的站。想交换链接？给我发邮件。</p>
+      <div class="fr-meta">
+        <p class="fr-sub">一些值得一看的朋友的站。整列灰度收录，<span class="em-font">悬停</span>则复色。</p>
+        <a class="fr-cta" href={mail} data-cursor>
+          <span class="fr-cta-no">[ {count} ]</span>
+          <span class="fr-cta-label">交换友链 →</span>
+        </a>
+      </div>
     </header>
 
     <ul class="fr-list">
       {
-        friends.map((f) => (
-          <li class="fr-item">
+        list.map((f) => (
+          <li class="fr-item" data-reveal>
             <a href={f.url} target="_blank" rel="noopener" data-cursor>
-              <span class="fr-name">{f.name}</span>
-              <span class="fr-desc">{f.desc}</span>
-              <span class="fr-host">{new URL(f.url).host} ↗</span>
+              <span class="fr-bar" aria-hidden="true" />
+              <span class="fr-ava">
+                {f.avatar ? (
+                  <img src={f.avatar} alt={f.name} loading="lazy" width="52" height="52" />
+                ) : (
+                  <span class="fr-mono">{f.mono}</span>
+                )}
+                <span class="fc tl" /><span class="fc tr" />
+                <span class="fc bl" /><span class="fc br" />
+              </span>
+              <span class="fr-body">
+                <span class="fr-top">
+                  <span class="fr-no">{f.no}</span>
+                  {f.tag && <span class="fr-tag">{f.tag}</span>}
+                </span>
+                <span class="fr-name">{f.name}</span>
+                <span class="fr-desc">{f.desc}</span>
+              </span>
+              <span class="fr-host">{f.host}<span class="fr-arrow"> ↗</span></span>
             </a>
           </li>
         ))
@@ -30,54 +64,206 @@ import friends from '../../data/friends.json';
 <style>
   .friends {
     padding-top: clamp(3rem, 10vh, 6rem);
+    padding-bottom: 5rem;
   }
   .fr-head {
-    margin-bottom: 2.5rem;
+    margin-bottom: 2.4rem;
   }
   .fr-head h1 {
     font-family: var(--font-zh-display);
     font-size: clamp(2.2rem, 6vw, 4rem);
-    margin: 0.3rem 0 0.6rem;
+    margin: 0.3rem 0 1rem;
+  }
+  .fr-meta {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.6rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line-strong);
   }
   .fr-sub {
     color: var(--fg-dim);
-    max-width: 42ch;
+    max-width: 46ch;
   }
+  /* 计数 + 交换友链 CTA */
+  .fr-cta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    color: var(--fg-faint);
+    transition: color 0.25s var(--ease);
+  }
+  .fr-cta-no {
+    color: var(--accent);
+  }
+  .fr-cta-label {
+    letter-spacing: 0.04em;
+    transition: transform 0.35s var(--ease);
+  }
+  .fr-cta:hover {
+    color: var(--fg);
+  }
+  .fr-cta:hover .fr-cta-label {
+    transform: translateX(3px);
+  }
+
   .fr-list {
     list-style: none;
   }
   .fr-item a {
+    position: relative;
     display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas: 'name host' 'desc host';
-    gap: 0.2rem 1rem;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    padding: 1.1rem 0;
+    gap: 0 1.2rem;
+    padding: 1.15rem 0 1.15rem 0;
     border-bottom: 1px solid var(--line);
     transition: padding-left 0.4s var(--ease);
   }
   .fr-item a:hover {
-    padding-left: 0.6rem;
+    padding-left: 1.1rem;
+  }
+  /* 左侧红色标记条：默认收起，悬停从中心展开 */
+  .fr-bar {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 2px;
+    height: 0;
+    background: var(--accent);
+    transform: translateY(-50%);
+    transition: height 0.4s var(--ease);
+  }
+  .fr-item a:hover .fr-bar {
+    height: 64%;
+  }
+
+  /* 头像 / 字母牌：灰度档案，悬停复色（呼应图集母题） */
+  .fr-ava {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    background: var(--bg-soft);
+    flex-shrink: 0;
+  }
+  .fr-ava img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1) contrast(0.95);
+    transition: filter 0.45s var(--ease), transform 0.45s var(--ease);
+  }
+  .fr-item a:hover .fr-ava img {
+    filter: grayscale(0) contrast(1);
+    transform: scale(1.05);
+  }
+  .fr-mono {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--fg-faint);
+    transition: color 0.3s var(--ease), background 0.3s var(--ease);
+  }
+  .fr-item a:hover .fr-mono {
+    color: var(--bg);
+    background: var(--accent);
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+  /* 取景框：默认隐藏，悬停浮现 */
+  .fr-ava .fc {
+    opacity: 0;
+    transition: opacity 0.3s var(--ease);
+  }
+  .fr-item a:hover .fr-ava .fc {
+    opacity: 1;
+  }
+
+  .fr-body {
+    min-width: 0;
+  }
+  .fr-top {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.15rem;
+  }
+  .fr-no {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--fg-faint);
+    transition: color 0.25s var(--ease);
+  }
+  .fr-item a:hover .fr-no {
+    color: var(--accent);
+  }
+  .fr-tag {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    padding: 0.1rem 0.45rem;
+    border: 1px solid var(--line);
   }
   .fr-name {
-    grid-area: name;
+    display: block;
     font-family: var(--font-display);
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     color: var(--fg);
   }
   .fr-desc {
-    grid-area: desc;
+    display: block;
     font-size: 0.9rem;
     color: var(--fg-dim);
+    margin-top: 0.1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .fr-host {
-    grid-area: host;
+    justify-self: end;
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--fg-faint);
-    transition: color 0.2s;
+    white-space: nowrap;
+    transition: color 0.25s var(--ease);
   }
   .fr-item a:hover .fr-host {
     color: var(--accent);
+  }
+  .fr-arrow {
+    display: inline-block;
+    transition: transform 0.35s var(--ease);
+  }
+  .fr-item a:hover .fr-arrow {
+    transform: translate(2px, -2px);
+  }
+
+  @media (max-width: 560px) {
+    .fr-item a {
+      grid-template-columns: auto 1fr;
+      gap: 0.2rem 1rem;
+    }
+    .fr-host {
+      grid-column: 2;
+      justify-self: start;
+      margin-top: 0.35rem;
+    }
+    .fr-desc {
+      white-space: normal;
+    }
   }
 </style>
