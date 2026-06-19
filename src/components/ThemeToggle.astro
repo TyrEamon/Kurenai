@@ -1,29 +1,32 @@
 ---
-// 暗(默认)/浅 主题切换，持久化到 localStorage，ClientRouter 导航后重新绑定。
-// 图标：单个 SVG 的「太阳⇄月亮」形变 —— 暗色显月牙(遮罩咬出缺口)、浅色显太阳(光芒绽放)。
+// Dark/light theme switcher with a radial reveal transition from the button center.
 ---
-<button class="theme-toggle" type="button" data-cursor aria-label="切换主题">
-  <svg class="tt" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-    <mask id="tt-mask">
-      <rect x="0" y="0" width="24" height="24" fill="#fff" />
-      <circle class="tt-cut" cx="18.5" cy="6.5" r="7" fill="#000" />
-    </mask>
-    <circle class="tt-core" cx="12" cy="12" r="6" mask="url(#tt-mask)" />
-    <g class="tt-rays" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-      <line x1="20.2" y1="12" x2="22.6" y2="12" />
-      <line x1="17.8" y1="17.8" x2="19.5" y2="19.5" />
-      <line x1="12" y1="20.2" x2="12" y2="22.6" />
-      <line x1="6.2" y1="17.8" x2="4.5" y2="19.5" />
-      <line x1="3.8" y1="12" x2="1.4" y2="12" />
-      <line x1="6.2" y1="6.2" x2="4.5" y2="4.5" />
-      <line x1="12" y1="3.8" x2="12" y2="1.4" />
-      <line x1="17.8" y1="6.2" x2="19.5" y2="4.5" />
-    </g>
-  </svg>
+<button class="theme-toggle" type="button" data-cursor aria-label="切换主题" aria-pressed="false">
+  <span class="tt-stage" aria-hidden="true">
+    <svg class="tt" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <mask id="tt-mask">
+        <rect x="0" y="0" width="24" height="24" fill="#fff" />
+        <circle class="tt-cut" cx="18.5" cy="6.5" r="7" fill="#000" />
+      </mask>
+      <circle class="tt-core" cx="12" cy="12" r="6" mask="url(#tt-mask)" />
+      <g class="tt-rays" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <line x1="20.2" y1="12" x2="22.6" y2="12" />
+        <line x1="17.8" y1="17.8" x2="19.5" y2="19.5" />
+        <line x1="12" y1="20.2" x2="12" y2="22.6" />
+        <line x1="6.2" y1="17.8" x2="4.5" y2="19.5" />
+        <line x1="3.8" y1="12" x2="1.4" y2="12" />
+        <line x1="6.2" y1="6.2" x2="4.5" y2="4.5" />
+        <line x1="12" y1="3.8" x2="12" y2="1.4" />
+        <line x1="17.8" y1="6.2" x2="19.5" y2="4.5" />
+      </g>
+    </svg>
+  </span>
 </button>
 
 <style>
   .theme-toggle {
+    position: relative;
+    isolation: isolate;
     background: none;
     border: 1px solid var(--line);
     color: var(--fg);
@@ -32,8 +35,20 @@
     border-radius: 999px;
     display: grid;
     place-items: center;
+    padding: 0;
     cursor: pointer;
-    transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease);
+    transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.2s var(--ease), box-shadow 0.35s var(--ease);
+  }
+  .theme-toggle::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    border: 1px solid color-mix(in srgb, var(--accent) 62%, transparent);
+    opacity: 0;
+    transform: scale(0.72);
+    pointer-events: none;
   }
   .theme-toggle:hover {
     border-color: var(--line-strong);
@@ -42,64 +57,209 @@
   .theme-toggle:active {
     transform: scale(0.9);
   }
+  .theme-toggle.is-switching {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .theme-toggle.is-switching::after {
+    animation: themeToggleRing 0.72s var(--ease);
+  }
+  .tt-stage {
+    display: grid;
+    place-items: center;
+    transform-origin: center;
+  }
+  .theme-toggle.is-switching .tt-stage {
+    animation: themeIconPop 0.68s var(--ease);
+  }
   .tt {
     overflow: visible;
+    transform-origin: center;
+    transition: transform 0.58s var(--ease), filter 0.35s var(--ease);
   }
   .tt-core {
     fill: currentColor;
+    transform-origin: 12px 12px;
   }
   .tt-cut,
   .tt-core,
   .tt-rays {
-    transition: transform 0.5s var(--ease), opacity 0.4s var(--ease);
+    transition: transform 0.58s var(--ease), opacity 0.42s var(--ease), stroke-dashoffset 0.56s var(--ease);
   }
-  .tt-rays {
-    transform-origin: 12px 12px;
-  }
-
-  /* 暗(默认) = 月亮：遮罩圆贴近内核咬出月牙；光芒收起 */
   .tt-cut {
     transform: translate(0, 0);
   }
   .tt-rays {
     opacity: 0;
-    transform: scale(0.4) rotate(-35deg);
+    transform-origin: 12px 12px;
+    transform: scale(0.32) rotate(-45deg);
+    stroke-dasharray: 3;
+    stroke-dashoffset: 3;
   }
-  /* 浅 = 太阳：遮罩圆移出内核(满月→整圆)；光芒绽放 */
-  [data-theme='light'] .tt-cut {
+  :global([data-theme='dark']) .tt {
+    transform: rotate(-12deg);
+  }
+  :global([data-theme='dark']) .theme-toggle:hover .tt-core {
+    transform: scale(1.08);
+  }
+  :global([data-theme='light']) .theme-toggle {
+    color: color-mix(in srgb, var(--accent) 82%, var(--fg));
+  }
+  :global([data-theme='light']) .tt {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 12%, transparent));
+  }
+  :global([data-theme='light']) .tt-core {
+    transform: scale(0.86);
+  }
+  :global([data-theme='light']) .tt-cut {
     transform: translate(12px, -12px);
   }
-  [data-theme='light'] .tt-rays {
+  :global([data-theme='light']) .tt-rays {
     opacity: 1;
-    transform: scale(1) rotate(0);
+    transform: scale(1) rotate(0deg);
+    stroke-dashoffset: 0;
   }
-  /* 悬停时太阳轻转、月亮微缩，增加生气 */
-  [data-theme='light'] .theme-toggle:hover .tt-rays {
-    transform: scale(1.06) rotate(20deg);
+  :global([data-theme='light']) .theme-toggle:hover .tt-rays {
+    transform: scale(1.06) rotate(18deg);
   }
-  [data-theme='dark'] .theme-toggle:hover .tt-core {
-    transform: scale(1.08);
+
+  @keyframes themeToggleRing {
+    0% {
+      opacity: 0.72;
+      transform: scale(0.72);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.58);
+    }
+  }
+  @keyframes themeIconPop {
+    0% {
+      transform: scale(1) rotate(0deg);
+    }
+    44% {
+      transform: scale(0.74) rotate(-28deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .theme-toggle,
+    .theme-toggle::after,
+    .tt,
     .tt-cut,
     .tt-core,
-    .tt-rays {
-      transition: none;
+    .tt-rays,
+    .tt-stage {
+      animation: none !important;
+      transition: none !important;
     }
   }
 </style>
 
 <script>
+  const THEME_REVEAL_DURATION = 720;
+  const THEME_REVEAL_EASING = 'cubic-bezier(0.76, 0, 0.24, 1)';
+
+  function syncThemeToggle(btn: HTMLButtonElement) {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    btn.setAttribute('aria-pressed', String(isLight));
+    btn.setAttribute('aria-label', isLight ? '切换到暗色主题' : '切换到浅色主题');
+  }
+
+  function applyTheme(next: 'dark' | 'light', btn?: HTMLButtonElement) {
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      // localStorage may be unavailable in private or restricted contexts.
+    }
+    (window as any).__runebyteApplyTheme?.(document, next) ?? (document.documentElement.dataset.theme = next);
+    if (btn) syncThemeToggle(btn);
+  }
+
+  function playButtonMotion(btn: HTMLButtonElement) {
+    btn.classList.remove('is-switching');
+    void btn.offsetWidth;
+    btn.classList.add('is-switching');
+    window.setTimeout(() => btn.classList.remove('is-switching'), THEME_REVEAL_DURATION);
+  }
+
+  async function revealThemeFromButton(btn: HTMLButtonElement, next: 'dark' | 'light') {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const startViewTransition = (document as any).startViewTransition;
+    if (!startViewTransition || prefersReducedMotion) {
+      applyTheme(next, btn);
+      return;
+    }
+
+    const rect = btn.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const endRadius = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)));
+    const clipPath = [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`];
+
+    document.documentElement.classList.add('theme-reveal-running');
+    document.documentElement.style.setProperty('--theme-reveal-x', `${x}px`);
+    document.documentElement.style.setProperty('--theme-reveal-y', `${y}px`);
+    const startedAt = performance.now();
+
+    try {
+      const transition = startViewTransition(() => applyTheme(next, btn));
+      await transition.ready;
+      const reveal = document.documentElement.animate(
+        { clipPath },
+        {
+          duration: THEME_REVEAL_DURATION,
+          easing: THEME_REVEAL_EASING,
+          pseudoElement: '::view-transition-new(root)',
+        },
+      );
+      await Promise.allSettled([reveal.finished, transition.finished]);
+    } catch {
+      applyTheme(next, btn);
+    } finally {
+      const cleanupDelay = Math.max(0, THEME_REVEAL_DURATION - (performance.now() - startedAt));
+      window.setTimeout(() => {
+        document.documentElement.classList.remove('theme-reveal-running');
+        document.documentElement.style.removeProperty('--theme-reveal-x');
+        document.documentElement.style.removeProperty('--theme-reveal-y');
+      }, cleanupDelay);
+    }
+  }
+
   function bindThemeToggle() {
     const btn = document.querySelector<HTMLButtonElement>('.theme-toggle');
-    if (!btn || btn.dataset.bound) return;
+    if (!btn) return;
+    syncThemeToggle(btn);
+    if (btn.dataset.bound) return;
     btn.dataset.bound = '1';
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
+      if (btn.dataset.animating === '1') return;
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', next);
-      (window as any).__runebyteApplyTheme?.(document, next);
+      btn.dataset.animating = '1';
+      playButtonMotion(btn);
+      void revealThemeFromButton(btn, next);
+      window.setTimeout(() => {
+        delete btn.dataset.animating;
+      }, THEME_REVEAL_DURATION + 120);
     });
   }
+
   document.addEventListener('astro:page-load', bindThemeToggle);
+  window.addEventListener('storage', () => {
+    const btn = document.querySelector<HTMLButtonElement>('.theme-toggle');
+    if (btn) syncThemeToggle(btn);
+  });
+  if (!(window as any).__runebyteThemeToggleObserverBound) {
+    (window as any).__runebyteThemeToggleObserverBound = true;
+    new MutationObserver(() => {
+      document.querySelectorAll<HTMLButtonElement>('.theme-toggle').forEach(syncThemeToggle);
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+  }
 </script>
