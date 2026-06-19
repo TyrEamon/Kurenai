@@ -94,11 +94,11 @@ const base = import.meta.env.BASE_URL;
     </section>
 
     <!-- 喜欢的游戏 -->
-    <section class="block" data-reveal>
+    <section class="block games-block" data-game-fold data-reveal>
       <p class="eyebrow">Playing · 喜欢的游戏</p>
       <div class="game-grid">
         {
-          games.map((g) => {
+          games.map((g, i) => {
             const Tag = g.url ? 'a' : 'div';
             return (
               <Tag
@@ -106,6 +106,7 @@ const base = import.meta.env.BASE_URL;
                 href={g.url}
                 target={g.url ? '_blank' : undefined}
                 rel={g.url ? 'noopener noreferrer' : undefined}
+                data-game-index={i + 1}
                 data-cursor={g.url ? '' : undefined}
               >
                 <span class="game-cover">
@@ -123,6 +124,12 @@ const base = import.meta.env.BASE_URL;
           })
         }
       </div>
+      {games.length > 8 ? (
+        <button class="game-more" type="button" data-game-toggle aria-expanded="false" data-cursor>
+          <span data-game-toggle-label>展开剩余 {Math.max(games.length - 8, 0)} 个</span>
+          <span class="game-more-mark" aria-hidden="true"></span>
+        </button>
+      ) : null}
     </section>
 
     <div class="contact" id="contact">
@@ -132,6 +139,45 @@ const base = import.meta.env.BASE_URL;
 
     <a class="back" href={base} data-cursor>← 回首页</a>
   </section>
+
+  <script>
+    const foldedLabel = (hidden: number) => `展开剩余 ${hidden} 个`;
+
+    function initGameFold() {
+      document.querySelectorAll<HTMLElement>('[data-game-fold]').forEach((block) => {
+        const toggle = block.querySelector<HTMLButtonElement>('[data-game-toggle]');
+        const label = block.querySelector<HTMLElement>('[data-game-toggle-label]');
+        const cards = Array.from(block.querySelectorAll<HTMLElement>('.game'));
+        if (!toggle || !label) return;
+
+        const limit = window.matchMedia('(max-width: 520px)').matches ? 8 : 14;
+        const hidden = Math.max(cards.length - limit, 0);
+        block.classList.toggle('has-hidden', hidden > 0);
+        toggle.hidden = hidden <= 0;
+
+        if (hidden <= 0) {
+          block.classList.remove('is-expanded');
+          toggle.setAttribute('aria-expanded', 'false');
+          return;
+        }
+
+        const syncLabel = () => {
+          const expanded = block.classList.contains('is-expanded');
+          toggle.setAttribute('aria-expanded', String(expanded));
+          label.textContent = expanded ? '收起游戏列表' : foldedLabel(hidden);
+        };
+
+        syncLabel();
+        toggle.onclick = () => {
+          block.classList.toggle('is-expanded');
+          syncLabel();
+        };
+      });
+    }
+
+    document.addEventListener('astro:page-load', initGameFold);
+    window.addEventListener('resize', initGameFold);
+  </script>
 </BaseLayout>
 
 <style>
@@ -346,9 +392,12 @@ const base = import.meta.env.BASE_URL;
   /* 喜欢的游戏：封面磁贴（灰度→悬停复色 + 取景框角标） */
   .game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 1.4rem 1.2rem;
     margin-top: 1.2rem;
+  }
+  .games-block:not(.is-expanded) .game:nth-child(n + 15) {
+    display: none;
   }
   .game {
     display: flex;
@@ -414,7 +463,47 @@ const base = import.meta.env.BASE_URL;
     line-height: 1.5;
     color: var(--fg-faint);
   }
-
+  .game-more {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 2.9rem;
+    margin-top: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--fg) 3%, transparent);
+    color: var(--fg-dim);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.25s var(--ease);
+  }
+  .games-block.has-hidden .game-more {
+    display: inline-flex;
+  }
+  .game-more:hover {
+    border-color: color-mix(in srgb, var(--accent) 52%, var(--line-strong));
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--accent);
+  }
+  .game-more:active {
+    transform: translateY(1px);
+  }
+  .game-more-mark {
+    width: 0.52rem;
+    height: 0.52rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-0.12rem) rotate(45deg);
+    transition: transform 0.25s var(--ease);
+  }
+  .games-block.is-expanded .game-more-mark {
+    transform: translateY(0.12rem) rotate(225deg);
+  }
+ 
   .contact {
     margin-bottom: 3rem;
   }
@@ -435,9 +524,21 @@ const base = import.meta.env.BASE_URL;
       grid-template-columns: 1fr;
     }
   }
+  @media (max-width: 1120px) {
+    .game-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+  }
   @media (max-width: 520px) {
     .game-grid {
       grid-template-columns: repeat(2, 1fr);
+    }
+    .games-block:not(.is-expanded) .game:nth-child(n + 9) {
+      display: none;
+    }
+    .game-more {
+      min-height: 3.1rem;
+      margin-top: 1.25rem;
     }
   }
 </style>

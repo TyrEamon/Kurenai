@@ -18,7 +18,7 @@ const stats = [
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="RuneByte · Tyr 的折腾与复盘" intro>
+<BaseLayout title="RuneByte · Experiments and Reviews" intro>
   <IntroAnimation />
 
   <section class="hero">
@@ -27,10 +27,10 @@ const base = import.meta.env.BASE_URL;
       <img src={`${base}site/hero-eyes.webp`} alt="" width="1536" height="1024" decoding="async" />
     </div>
     <div class="wrap">
-      <p class="eyebrow">creative notes · 折腾 与 复盘</p>
+      <p class="eyebrow">Experiments and Reviews</p>
       <h1 class="hero-name">RuneByte<span class="dot">.</span></h1>
-      <p class="hero-tag">
-        我是 Tyr。在这里记录<span class="em-font">项目复盘</span>、技术折腾，与一些日常手记。
+      <p class="hero-quote" data-typewrite>
+        回忆是一条<strong><em>没有归途</em></strong>的路，<em>记录即是存档</em>。那些曾经折腾过的<strong><em>项目</em></strong>、修复过的<strong><em>错误</em></strong>、深夜浮现的<strong>灵感</strong>，以及无法重来的<strong><em>手记片段</em></strong>，都将在此慢慢留存。
       </p>
       <a class="hero-cue" href="#enter" data-cursor>↓ scroll</a>
     </div>
@@ -45,7 +45,7 @@ const base = import.meta.env.BASE_URL;
     <aside class="profile-card" data-reveal>
       <img class="pc-avatar" src={profile.avatar} alt={profile.name} width="84" height="84" />
       <div class="pc-name">RuneByte<span class="dot">.</span></div>
-      <div class="pc-by">{profile.name} · 折腾与复盘</div>
+      <div class="pc-by">{profile.name} · Experiments and Reviews</div>
       <div class="pc-bio">
         <p class="pc-bio-main">{profile.tagline}</p>
         {profile.taglineSub.map((t) => <p>{t}</p>)}
@@ -205,11 +205,47 @@ const base = import.meta.env.BASE_URL;
   .hero-name .dot {
     color: var(--accent);
   }
-  .hero-tag {
-    max-width: 34ch;
-    font-size: clamp(1.05rem, 2.4vw, 1.5rem);
-    line-height: 1.5;
+  .hero-quote {
+    max-width: 54ch;
+    font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Source Han Serif CN', '思源宋体', var(--font-zh-display);
+    font-size: clamp(1.02rem, 1.65vw, 1.36rem);
+    font-weight: 500;
+    line-height: 1.78;
+    letter-spacing: 0.02em;
     color: var(--fg-dim);
+    text-wrap: pretty;
+  }
+  .hero-quote strong {
+    font-weight: 700;
+    color: var(--fg);
+  }
+  .hero-quote em {
+    color: var(--fg);
+    font-style: normal;
+    background: linear-gradient(to top, color-mix(in srgb, var(--accent) 22%, transparent) 0 0.36em, transparent 0.36em);
+  }
+  .hero-quote strong em {
+    color: color-mix(in srgb, var(--accent) 76%, var(--fg));
+    background: linear-gradient(to top, color-mix(in srgb, var(--accent) 28%, transparent) 0 0.42em, transparent 0.42em);
+  }
+  :global(.js) .hero-quote[data-typewrite]:not(.is-typewrite-started) {
+    visibility: hidden;
+  }
+  .hero-quote.is-typing::after,
+  .hero-quote.is-typed::after {
+    content: '';
+    display: inline-block;
+    width: 0.08em;
+    height: 1.08em;
+    margin-left: 0.25em;
+    vertical-align: -0.14em;
+    background: var(--accent);
+    animation: quoteCaret 0.86s steps(1) infinite;
+  }
+  @keyframes quoteCaret {
+    50% {
+      opacity: 0;
+    }
   }
   .hero-cue {
     display: inline-block;
@@ -346,6 +382,11 @@ const base = import.meta.env.BASE_URL;
       right: -32%;
       opacity: 0.3;
     }
+    .hero-quote {
+      max-width: 31ch;
+      font-size: clamp(0.98rem, 4.1vw, 1.12rem);
+      line-height: 1.72;
+    }
     .hero-bg::after {
       display: none;
     }
@@ -373,6 +414,83 @@ const base = import.meta.env.BASE_URL;
   // 首屏 Hero → 渐入博客：向下滚动/点 ↓scroll/触屏上滑，都平滑「滑入」博客（与点击一致）；
   // Hero 内容随滚动缓慢淡出上移，形成较慢的交叉渐变。正常页面、不锁。
   let off: (() => void) | null = null;
+  let quoteTimer: number | null = null;
+  let quoteRunId = 0;
+ 
+  function resetQuoteTyping() {
+    if (quoteTimer) clearTimeout(quoteTimer);
+    quoteTimer = null;
+    quoteRunId += 1;
+  }
+ 
+  function getQuoteParts(root: HTMLElement) {
+    if (!root.dataset.typewriteSource) root.dataset.typewriteSource = root.innerHTML.trim();
+    root.innerHTML = root.dataset.typewriteSource;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+    });
+    const parts: { node: Text; text: string }[] = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      parts.push({ node, text: node.textContent || '' });
+    }
+    parts.forEach(({ node }) => (node.textContent = ''));
+    return parts;
+  }
+ 
+  function setQuoteImmediate(root: HTMLElement) {
+    root.innerHTML = root.dataset.typewriteSource || root.innerHTML;
+    root.classList.add('is-typewrite-started');
+    root.classList.remove('is-typing');
+    root.classList.add('is-typed');
+  }
+ 
+  function playQuoteTyping() {
+    const quote = document.querySelector<HTMLElement>('[data-typewrite]');
+    if (!quote) return;
+    resetQuoteTyping();
+ 
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setQuoteImmediate(quote);
+      return;
+    }
+ 
+    const parts = getQuoteParts(quote);
+    if (!parts.length) return;
+    const runId = quoteRunId;
+    quote.classList.add('is-typewrite-started');
+    quote.classList.add('is-typing');
+    quote.classList.remove('is-typed');
+ 
+    let partIndex = 0;
+    let charIndex = 0;
+    const tick = () => {
+      if (runId !== quoteRunId) return;
+      const part = parts[partIndex];
+      if (!part) {
+        quote.classList.remove('is-typing');
+        quote.classList.add('is-typed');
+        quoteTimer = null;
+        return;
+      }
+ 
+      charIndex += 1;
+      const typedChar = part.text.charAt(charIndex - 1);
+      part.node.textContent = part.text.slice(0, charIndex);
+
+      if (charIndex >= part.text.length) {
+        partIndex += 1;
+        charIndex = 0;
+      }
+
+      const delay = /[，。！？；：,.!?;:]/.test(typedChar) ? 105 : typedChar.trim() ? 36 : 14;
+      quoteTimer = window.setTimeout(tick, delay);
+    };
+ 
+    quoteTimer = window.setTimeout(tick, 220);
+  }
   function initHero() {
     off?.();
     off = null;
@@ -404,7 +522,7 @@ const base = import.meta.env.BASE_URL;
       if (gliding || !target) return;
       const l = lenis();
       if (!l) {
-        target.scrollIntoView({ behavior: 'smooth' });
+        window.scrollTo({ top: target.offsetTop - 90, behavior: 'smooth' });
         return;
       }
       gliding = true;
@@ -454,20 +572,28 @@ const base = import.meta.env.BASE_URL;
     // 撕裂入场：等入场幕布揭开后给 .hero 挂 is-revealed —— 红瞳沿撕裂口裂开浮现 + 红瞳呼吸光起拍
     let stopReveal: (() => void) | null = null;
     if (heroEl) {
-      const reveal = () => heroEl.classList.add('is-revealed');
+      let revealed = false;
+      let revealTimer: number | null = null;
+      const reveal = () => {
+        if (revealed) return;
+        revealed = true;
+        heroEl.classList.add('is-revealed');
+        window.setTimeout(playQuoteTyping, 140);
+      };
       if (!document.getElementById('intro')) {
         reveal(); // 入场层已结束/被跳过：直接揭示
       } else {
         window.addEventListener('runebyte:intro-done', reveal, { once: true });
-        const rt = window.setTimeout(reveal, 2600); // 兜底：漏接事件也能揭示
+        revealTimer = window.setTimeout(reveal, 2600); // 兜底：漏接事件也能揭示
         stopReveal = () => {
           window.removeEventListener('runebyte:intro-done', reveal);
-          clearTimeout(rt);
+          if (revealTimer) clearTimeout(revealTimer);
         };
       }
     }
 
     off = () => {
+      resetQuoteTyping();
       removeEventListener('scroll', onScroll);
       removeEventListener('wheel', onWheel);
       removeEventListener('touchstart', onTS);
