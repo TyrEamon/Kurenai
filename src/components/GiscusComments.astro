@@ -1,0 +1,168 @@
+---
+// Defaults mirror the old blog's Giscus setup; PUBLIC_GISCUS_* can override them.
+const repo = import.meta.env.PUBLIC_GISCUS_REPO || 'TyrEamon/tyrsblog';
+const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID || 'R_kgDOQ_25ww';
+const category = import.meta.env.PUBLIC_GISCUS_CATEGORY || 'Announcements';
+const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID || 'DIC_kwDOQ_25w84C1Vdw';
+const mapping = import.meta.env.PUBLIC_GISCUS_MAPPING || 'pathname';
+const commentsEnabled = import.meta.env.PUBLIC_GISCUS_ENABLED !== 'false' && repo && repoId && category && categoryId;
+---
+
+<section class="comments-card" id="comments" data-pagefind-ignore>
+  <div class="comments-head">
+    <div>
+      <p class="comments-kicker">Comments</p>
+      <h2>讨论</h2>
+    </div>
+    <p>小提示：评论区依赖 GitHub Discussions，登录前请确认网络能正常访问 GitHub。</p>
+  </div>
+  {
+    commentsEnabled ? (
+      <div
+        class="giscus-host"
+        data-giscus="true"
+        data-repo={repo}
+        data-repo-id={repoId}
+        data-category={category}
+        data-category-id={categoryId}
+        data-mapping={mapping}
+      />
+    ) : (
+      <p class="comments-empty">评论区已预留。配置 Giscus 后，这里会自动加载讨论。</p>
+    )
+  }
+</section>
+
+{
+  commentsEnabled && (
+    <script is:inline>
+      (() => {
+        const state = (window.__runebyteGiscus = window.__runebyteGiscus || {});
+
+        const getTheme = () =>
+          document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+
+        const syncTheme = () => {
+          document.querySelectorAll('iframe.giscus-frame').forEach((iframe) => {
+            if (!iframe.src || new URL(iframe.src).origin !== 'https://giscus.app') return;
+            try {
+              if (iframe.contentWindow?.location.origin !== 'https://giscus.app') return;
+            } catch {
+              // Cross-origin access means the iframe has loaded the Giscus app.
+            }
+            iframe.contentWindow?.postMessage(
+              { giscus: { setConfig: { theme: getTheme() } } },
+              'https://giscus.app',
+            );
+          });
+        };
+
+        const load = () => {
+          document.querySelectorAll('[data-giscus="true"]').forEach((host) => {
+            if (host.dataset.loadedFor === location.pathname) return;
+
+            host.innerHTML = '';
+            host.dataset.loadedFor = location.pathname;
+
+            const script = document.createElement('script');
+            script.src = 'https://giscus.app/client.js';
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.setAttribute('data-repo', host.dataset.repo || '');
+            script.setAttribute('data-repo-id', host.dataset.repoId || '');
+            script.setAttribute('data-category', host.dataset.category || '');
+            script.setAttribute('data-category-id', host.dataset.categoryId || '');
+            script.setAttribute('data-mapping', host.dataset.mapping || 'pathname');
+            script.setAttribute('data-strict', '0');
+            script.setAttribute('data-reactions-enabled', '1');
+            script.setAttribute('data-emit-metadata', '0');
+            script.setAttribute('data-input-position', 'top');
+            script.setAttribute('data-theme', getTheme());
+            script.setAttribute('data-lang', 'zh-CN');
+            script.setAttribute('data-loading', 'lazy');
+            script.addEventListener('load', () => window.setTimeout(syncTheme, 0), { once: true });
+            host.appendChild(script);
+          });
+        };
+
+        state.load = load;
+        state.syncTheme = syncTheme;
+
+        if (!state.bound) {
+          state.bound = true;
+          document.addEventListener('astro:page-load', load);
+          document.addEventListener('astro:after-swap', load);
+          new MutationObserver(syncTheme).observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme'],
+          });
+        }
+
+        load();
+      })();
+    </script>
+  )
+}
+
+<style>
+  .comments-card {
+    padding: 1.15rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-soft) 58%, transparent);
+  }
+  .comments-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.9rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .comments-kicker {
+    margin: 0 0 0.16rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .comments-head h2 {
+    margin: 0;
+    font-family: var(--font-zh-display);
+    font-size: 1.15rem;
+    line-height: 1.25;
+    color: var(--fg);
+  }
+  .comments-head > p {
+    max-width: 30ch;
+    margin: 0;
+    color: var(--fg-faint);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    text-align: right;
+    text-wrap: pretty;
+  }
+  .giscus-host {
+    min-height: 9rem;
+  }
+  .comments-empty {
+    margin: 0;
+    color: var(--fg-faint);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 680px) {
+    .comments-card {
+      padding: 1rem;
+    }
+    .comments-head {
+      align-items: start;
+      flex-direction: column;
+    }
+    .comments-head > p {
+      text-align: left;
+    }
+  }
+</style>

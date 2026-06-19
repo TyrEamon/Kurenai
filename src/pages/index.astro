@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import IntroAnimation from '../components/IntroAnimation.astro';
+import HeroStreams from '../components/HeroStreams.astro';
 import PostCard from '../components/PostCard.astro';
 import SocialIcons from '../components/SocialIcons.astro';
 import { profile } from '../data/profile';
@@ -21,6 +22,10 @@ const base = import.meta.env.BASE_URL;
   <IntroAnimation />
 
   <section class="hero">
+    <HeroStreams />
+    <div class="hero-bg" aria-hidden="true">
+      <img src={`${base}site/hero-eyes.webp`} alt="" width="1536" height="1024" decoding="async" />
+    </div>
     <div class="wrap">
       <p class="eyebrow">creative notes · 折腾 与 复盘</p>
       <h1 class="hero-name">RuneByte<span class="dot">.</span></h1>
@@ -83,11 +88,107 @@ const base = import.meta.env.BASE_URL;
 
 <style>
   .hero {
+    position: relative;
+    overflow: hidden;
     min-height: 100vh;
     min-height: 100svh;
     display: flex;
     flex-direction: column;
     justify-content: center;
+  }
+  /* Hero banner 母题：扣图红瞳，仅首屏出现；遮罩溶进黑底，藏在大字之后 —— 偏离 §8#2 的有意决定 */
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero .wrap {
+    position: relative;
+    z-index: 1;
+  }
+  .hero-bg img {
+    position: absolute;
+    top: 50%;
+    right: 1%;
+    width: min(72vw, 1040px);
+    height: auto;
+    transform: translateY(-50%);
+    opacity: 0.85;
+    /* 左侧溶进黑底（让出文字），右缘轻收 —— 去掉扣图的硬边「贴纸感」 */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      transparent 10%,
+      #000 30%,
+      #000 90%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      transparent 10%,
+      #000 30%,
+      #000 90%,
+      transparent 100%
+    );
+    /* 氛围呼吸：缓慢上下浮动（reduced-motion 下全局自动失效） */
+    animation: heroFloat 7s ease-in-out infinite;
+    will-change: transform;
+  }
+  /* 浅色（阅读态）：扣图深色线条在米白上更跳，压低存在感 */
+  [data-theme='light'] .hero-bg img {
+    opacity: 0.4;
+  }
+  @keyframes heroFloat {
+    0%,
+    100% {
+      transform: translateY(-50%);
+    }
+    50% {
+      transform: translateY(calc(-50% - 7px));
+    }
+  }
+
+  /* —— 撕裂入场 + 红瞳呼吸光（仅首屏；reduced-motion 下全局自动失效）—— */
+  .hero-bg img {
+    transition: clip-path 1.05s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.85s ease-out;
+  }
+  /* 入场前合上：撕裂口闭合 + 透明（仅 JS 生效，no-JS 仍正常显示） */
+  .js .hero:not(.is-revealed) .hero-bg img {
+    opacity: 0;
+    clip-path: inset(50% 0 50% 0);
+  }
+  /* 红瞳呼吸光：眼睛区域一团极淡红光（落点可调 right / top / width） */
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: calc(1% + min(36vw, 520px) - 170px);
+    width: 340px;
+    height: 240px;
+    transform: translateY(-50%);
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 30, 0, 0.5),
+      rgba(255, 30, 0, 0) 66%
+    );
+    mix-blend-mode: screen;
+    filter: blur(8px);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .hero.is-revealed .hero-bg::after {
+    animation: eyeGlow 5s ease-in-out infinite;
+  }
+  @keyframes eyeGlow {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
   }
   .divider {
     border-top: 1px dashed var(--line-strong);
@@ -238,12 +339,32 @@ const base = import.meta.env.BASE_URL;
     color: var(--accent);
   }
 
+  /* 窄屏：图退成很淡的底纹，偏右下，绝不压住正文可读性 */
+  @media (max-width: 720px) {
+    .hero-bg img {
+      width: 145%;
+      right: -32%;
+      opacity: 0.3;
+    }
+    .hero-bg::after {
+      display: none;
+    }
+    [data-theme='light'] .hero-bg img {
+      opacity: 0.22;
+    }
+  }
+
   @media (max-width: 860px) {
     .home-main {
       grid-template-columns: 1fr;
     }
+    .home-feed {
+      order: 1;
+    }
     .profile-card {
       position: static;
+      order: 2;
+      margin-top: 2.4rem;
     }
   }
 </style>
@@ -328,6 +449,24 @@ const base = import.meta.env.BASE_URL;
     addEventListener('keydown', onKey);
     cue?.addEventListener('click', onCue);
 
+    const heroEl = document.querySelector<HTMLElement>('.hero');
+
+    // 撕裂入场：等入场幕布揭开后给 .hero 挂 is-revealed —— 红瞳沿撕裂口裂开浮现 + 红瞳呼吸光起拍
+    let stopReveal: (() => void) | null = null;
+    if (heroEl) {
+      const reveal = () => heroEl.classList.add('is-revealed');
+      if (!document.getElementById('intro')) {
+        reveal(); // 入场层已结束/被跳过：直接揭示
+      } else {
+        window.addEventListener('runebyte:intro-done', reveal, { once: true });
+        const rt = window.setTimeout(reveal, 2600); // 兜底：漏接事件也能揭示
+        stopReveal = () => {
+          window.removeEventListener('runebyte:intro-done', reveal);
+          clearTimeout(rt);
+        };
+      }
+    }
+
     off = () => {
       removeEventListener('scroll', onScroll);
       removeEventListener('wheel', onWheel);
@@ -335,6 +474,7 @@ const base = import.meta.env.BASE_URL;
       removeEventListener('touchmove', onTM);
       removeEventListener('keydown', onKey);
       cue?.removeEventListener('click', onCue);
+      stopReveal?.();
     };
   }
   document.addEventListener('astro:page-load', initHero);

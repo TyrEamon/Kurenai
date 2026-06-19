@@ -97,8 +97,8 @@
     btn.dataset.bound = '1';
     btn.addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-      document.documentElement.dataset.theme = next;
       localStorage.setItem('theme', next);
+      (window as any).__runebyteApplyTheme?.(document, next);
     });
   }
   document.addEventListener('astro:page-load', bindThemeToggle);

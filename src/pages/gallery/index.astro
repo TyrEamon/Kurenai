@@ -1,0 +1,570 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="图集 · RuneByte" description="随机图灰度档案墙 · 悬停复色，点开看全彩">
+  <section class="wrap gallery">
+    <header class="gal-head" data-reveal>
+      <p class="eyebrow">Gallery · 图集</p>
+      <h1>图集</h1>
+      <div class="gal-meta">
+        <span id="gal-count" class="gal-count">加载中…</span>
+        <div class="gal-controls">
+          <span class="gal-switch" role="group" aria-label="图片方向">
+            <button id="btn-h" type="button" class="gal-tab is-active" data-cursor>横屏</button>
+            <span class="gal-sep">/</span>
+            <button id="btn-v" type="button" class="gal-tab" data-cursor>竖屏</button>
+          </span>
+          <button id="btn-sort" type="button" class="gal-sort" data-cursor>⇅ 最新</button>
+        </div>
+      </div>
+      <p class="gal-source">
+        图源 <a href="https://rapi.mtcacg.top" target="_blank" rel="noopener noreferrer" data-cursor
+          >rapi.mtcacg.top</a
+        > · 整墙灰度，悬停单张复色
+      </p>
+    </header>
+
+    <div id="gallery" class="gal-grid" data-ready="false" aria-busy="true"></div>
+    <p id="gal-status" class="gal-status" role="status" aria-live="polite"></p>
+    <div id="sentinel" aria-hidden="true"></div>
+  </section>
+</BaseLayout>
+
+<style>
+  .gallery {
+    padding-top: clamp(3rem, 10vh, 6rem);
+    padding-bottom: 4rem;
+  }
+  .gal-head {
+    margin-bottom: 1.6rem;
+  }
+  .gal-head h1 {
+    font-family: var(--font-zh-display);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    margin-top: 0.3rem;
+  }
+  .gal-meta {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.4rem;
+    margin-top: 0.95rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .gal-count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+  }
+  .gal-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+  }
+  .gal-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .gal-tab,
+  .gal-sort {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    color: var(--fg-faint);
+    background: none;
+    border: none;
+    padding: 0.1rem 0;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .gal-tab:hover,
+  .gal-sort:hover {
+    color: var(--fg);
+  }
+  .gal-tab.is-active {
+    color: var(--fg);
+    border-bottom: 1.5px solid var(--accent);
+  }
+  .gal-sep {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+  }
+  .gal-sort {
+    letter-spacing: 0.06em;
+  }
+  .gal-source {
+    margin-top: 0.65rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+    color: var(--fg-faint);
+  }
+  .gal-source a {
+    color: var(--fg-dim);
+    border-bottom: 1px solid var(--line);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .gal-source a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .gal-grid {
+    width: 100%;
+    margin-top: 1.5rem;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .gal-grid[data-ready='true'] {
+    opacity: 1;
+    transform: none;
+  }
+  .gal-status {
+    margin-top: 1.4rem;
+    min-height: 1.4rem;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--fg-faint);
+  }
+  #sentinel {
+    height: 4px;
+  }
+</style>
+
+<!-- 画廊单元由 JS 动态创建，拿不到 Astro scoped hash，样式必须 is:global；全部以 #gallery 前缀防泄漏 -->
+<style is:global>
+  #gallery .gal-item {
+    display: block;
+    line-height: 0;
+    opacity: 0;
+    transition: opacity 0.45s var(--ease);
+  }
+  #gallery .gal-item.is-loaded {
+    opacity: 1;
+  }
+  #gallery .gal-frame {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+    transition: border-color 0.25s var(--ease);
+  }
+  /* 整墙默认灰度（黑白档案墙）；彩色是悬停/灯箱才兑现的奖励 */
+  #gallery .gal-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: grayscale(1) contrast(1.02) brightness(0.97);
+    transform-origin: center;
+    transition: filter 0.45s var(--ease), transform 0.45s var(--ease);
+  }
+  /* 等宽索引号（右下角，hover 浮出） */
+  #gallery .gal-idx {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 3;
+    padding: 0.12em 0.45em;
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.25s var(--ease);
+    pointer-events: none;
+  }
+  /* 取景框角标（左上 + 右下 L 形红色裁切标，hover 浮出） */
+  #gallery .gal-frame::before,
+  #gallery .gal-frame::after {
+    content: '';
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.25s var(--ease);
+    pointer-events: none;
+  }
+  #gallery .gal-frame::before {
+    top: 7px;
+    left: 7px;
+    border-top: 1.5px solid var(--accent);
+    border-left: 1.5px solid var(--accent);
+  }
+  #gallery .gal-frame::after {
+    bottom: 7px;
+    right: 7px;
+    border-bottom: 1.5px solid var(--accent);
+    border-right: 1.5px solid var(--accent);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    #gallery .gal-item:hover .gal-frame {
+      border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong));
+    }
+    #gallery .gal-item:hover .gal-frame img {
+      filter: none;
+      transform: scale(1.03);
+    }
+    #gallery .gal-item:hover .gal-idx,
+    #gallery .gal-item:hover .gal-frame::before,
+    #gallery .gal-item:hover .gal-frame::after {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  // 画廊：远程随机图(rapi.mtcacg.top)瀑布流。横/竖切换、最新/最旧、触底无限加载。
+  // 灰度档案墙 → 悬停复色；灯箱复用全局 ImageLightbox 的 Fancybox 黑白红主题(组名隔离为 gallery)。
+  import Masonry from 'masonry-layout';
+  import imagesLoaded from 'imagesloaded';
+  import { Fancybox } from '@fancyapps/ui';
+
+  const DOMAIN = 'https://rapi.mtcacg.top';
+  const COUNTS_URL = `${DOMAIN}/counts.json`;
+  const RANDOM_JS_URL = `${DOMAIN}/random.js`;
+  const FALLBACK = { h: 1341, v: 748 }; // CORS 取数失败时的兜底，墙仍可渲染
+
+  type GType = 'h' | 'v';
+  let counts: { h: number; v: number } = { h: 0, v: 0 };
+  let type: GType = 'h';
+  let reverse = true; // true=最新优先(从大到小)
+  let nextIndex = 1;
+  let loading = false;
+  let msnry: any = null;
+  let io: IntersectionObserver | null = null;
+  let resizeHandler: (() => void) | null = null;
+  let fancyBound = false;
+
+  const $ = (id: string) => document.getElementById(id);
+  const typeLabel = () => (type === 'h' ? '横屏' : '竖屏');
+
+  function getColumns() {
+    const w = window.innerWidth;
+    let cols = w >= 1024 ? 4 : w >= 768 ? 3 : 2;
+    if (type === 'v' && w >= 1024) cols += 1; // 竖图更窄，多放一列
+    return cols;
+  }
+
+  function getLayoutConfig(el: HTMLElement) {
+    const gutter = 10;
+    const cols = getColumns();
+    const width = el.clientWidth || 0;
+    const columnWidth = Math.max(120, Math.floor((width - gutter * (cols - 1)) / cols));
+    return { gutter, columnWidth };
+  }
+
+  async function fetchCounts() {
+    const ts = Date.now();
+    try {
+      const r = await fetch(`${COUNTS_URL}?ts=${ts}`, { cache: 'no-store' });
+      if (r.ok) {
+        const p = await r.json();
+        const h = Number(p.h || 0);
+        const v = Number(p.v || 0);
+        if (Number.isFinite(h) && Number.isFinite(v) && (h || v)) {
+          counts = { h, v };
+          return;
+        }
+      }
+    } catch {
+      /* 落到下一兜底 */
+    }
+    try {
+      const r = await fetch(`${RANDOM_JS_URL}?ts=${ts}`, { cache: 'no-store' });
+      if (r.ok) {
+        const t = await r.text();
+        const m = t.match(/(?:var|const|let)\s+counts\s*=\s*(\{[^;]+\})\s*;/);
+        if (m) {
+          const p = JSON.parse(m[1]);
+          const h = Number(p.h || 0);
+          const v = Number(p.v || 0);
+          if (Number.isFinite(h) && Number.isFinite(v) && (h || v)) {
+            counts = { h, v };
+            return;
+          }
+        }
+      }
+    } catch {
+      /* 落到硬编码兜底 */
+    }
+    counts = { ...FALLBACK };
+  }
+
+  function updateCount() {
+    const el = $('gal-count');
+    if (el) el.textContent = `共 ${counts[type] || 0} 张 · ${typeLabel()}`;
+  }
+
+  function setActiveTabs() {
+    $('btn-h')?.classList.toggle('is-active', type === 'h');
+    $('btn-v')?.classList.toggle('is-active', type === 'v');
+  }
+
+  function updateSortBtn() {
+    const b = $('btn-sort');
+    if (b) b.textContent = `⇅ ${reverse ? '最新' : '最旧'}`;
+  }
+
+  function resetIndex() {
+    const max = counts[type] || 0;
+    nextIndex = reverse ? max : 1;
+  }
+
+  function getNextIndex(max: number): number | null {
+    if (reverse) {
+      if (nextIndex < 1) return null;
+      return nextIndex--;
+    }
+    if (nextIndex > max) return null;
+    return nextIndex++;
+  }
+
+  function buildImgUrl(n: number) {
+    return `${DOMAIN}/ri/${type}/${n}.webp`;
+  }
+
+  function buildCell(n: number, width: number) {
+    const total = counts[type] || 0;
+    const url = buildImgUrl(n);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.className = 'gal-item';
+    a.dataset.fancybox = 'gallery';
+    a.dataset.caption = `#${n} · ${typeLabel()}`;
+    a.setAttribute('data-cursor', '');
+    a.setAttribute('aria-label', `查看画廊图 #${n}`);
+    a.style.width = `${width}px`;
+
+    const frame = document.createElement('span');
+    frame.className = 'gal-frame';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.alt = `画廊图 #${n}`;
+
+    const idx = document.createElement('span');
+    idx.className = 'gal-idx';
+    idx.textContent = `${n} / ${total}`;
+
+    frame.appendChild(img);
+    frame.appendChild(idx);
+    a.appendChild(frame);
+    return a;
+  }
+
+  function clearGallery() {
+    const el = $('gallery');
+    if (!el) return;
+    el.innerHTML = '';
+    el.dataset.ready = 'false';
+    el.setAttribute('aria-busy', 'true');
+    resetIndex();
+    if (msnry) {
+      msnry.destroy();
+      msnry = null;
+    }
+  }
+
+  async function loadMore(batch = 20) {
+    const el = $('gallery');
+    const status = $('gal-status');
+    if (!el || loading) return;
+    const max = counts[type];
+    if (!max) return;
+    loading = true;
+    if (status) status.textContent = '加载中…';
+
+    try {
+      const { gutter, columnWidth } = getLayoutConfig(el);
+      if (!msnry) {
+        msnry = new Masonry(el, {
+          itemSelector: '.gal-item',
+          gutter,
+          columnWidth,
+          transitionDuration: '0.2s',
+          percentPosition: false,
+        });
+      }
+
+      const frag = document.createDocumentFragment();
+      const items: HTMLElement[] = [];
+      for (let i = 0; i < batch; i++) {
+        const n = getNextIndex(max);
+        if (n == null) break;
+        const cell = buildCell(n, columnWidth);
+        items.push(cell);
+        frag.appendChild(cell);
+      }
+
+      if (items.length) {
+        el.appendChild(frag);
+        await new Promise<void>((resolve) => {
+          imagesLoaded(items, () => {
+            if (!msnry) return resolve();
+            msnry.appended(items);
+            msnry.layout();
+            items.forEach((it) => it.classList.add('is-loaded'));
+            if (el.dataset.ready !== 'true') {
+              el.dataset.ready = 'true';
+              el.setAttribute('aria-busy', 'false');
+            }
+            resolve();
+          });
+        });
+      }
+
+      const hasMore = reverse ? nextIndex >= 1 : nextIndex <= max;
+      if (status) status.textContent = hasMore ? '' : `已抵达底部 · 共 ${max} 张`;
+
+      // 内容不足一屏时继续补，确保 sentinel 能脱离视口
+      if (hasMore) {
+        const s = $('sentinel');
+        if (s && s.getBoundingClientRect().top < window.innerHeight + 600) {
+          setTimeout(() => loadMore(batch), 60);
+        }
+      }
+    } finally {
+      loading = false;
+    }
+  }
+
+  function setType(t: GType) {
+    if (t === type) return;
+    type = t;
+    setActiveTabs();
+    updateCount();
+    clearGallery();
+    loadMore(24);
+  }
+
+  function toggleSort() {
+    reverse = !reverse;
+    updateSortBtn();
+    clearGallery();
+    loadMore(24);
+  }
+
+  function setupInfinite() {
+    const s = $('sentinel');
+    if (!s) return;
+    io?.disconnect();
+    io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !loading) loadMore(20);
+      },
+      { rootMargin: '600px 0px' },
+    );
+    io.observe(s);
+  }
+
+  function setupResize() {
+    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+    let raf = 0;
+    resizeHandler = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const el = $('gallery');
+        if (!el || !msnry) return;
+        const { gutter, columnWidth } = getLayoutConfig(el);
+        el.querySelectorAll<HTMLElement>('.gal-item').forEach((it) => {
+          it.style.width = `${columnWidth}px`;
+        });
+        msnry.options.gutter = gutter;
+        msnry.options.columnWidth = columnWidth;
+        msnry.layout();
+      });
+    };
+    window.addEventListener('resize', resizeHandler, { passive: true });
+  }
+
+  function bindFancybox() {
+    if (fancyBound) return;
+    (Fancybox as any).bind('[data-fancybox="gallery"]', {
+      backdropClick: 'close',
+      dragToClose: true,
+      Carousel: {
+        Toolbar: {
+          display: {
+            left: ['counter'],
+            middle: ['zoomIn', 'zoomOut', 'rotateCW'],
+            right: ['slideshow', 'thumbs', 'fullscreen', 'close'],
+          },
+        },
+        Thumbs: { type: 'classic' },
+      },
+      on: {
+        init: () => {
+          document.body.classList.add('lightbox-open');
+          (window as any).lenis?.stop?.();
+        },
+        destroy: () => {
+          document.body.classList.remove('lightbox-open');
+          (window as any).lenis?.start?.();
+        },
+      },
+    });
+    fancyBound = true;
+  }
+
+  async function init() {
+    const el = $('gallery');
+    if (!el || el.dataset.inited === 'true') return;
+    el.dataset.inited = 'true';
+
+    setActiveTabs();
+    updateSortBtn();
+    await fetchCounts();
+    updateCount();
+    clearGallery();
+    await loadMore(24);
+
+    $('btn-h')?.addEventListener('click', () => setType('h'));
+    $('btn-v')?.addEventListener('click', () => setType('v'));
+    $('btn-sort')?.addEventListener('click', toggleSort);
+
+    setupInfinite();
+    setupResize();
+    bindFancybox();
+  }
+
+  function teardown() {
+    io?.disconnect();
+    io = null;
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler);
+      resizeHandler = null;
+    }
+    if (msnry) {
+      msnry.destroy();
+      msnry = null;
+    }
+    if (fancyBound) {
+      (Fancybox as any).unbind('[data-fancybox="gallery"]');
+      (Fancybox as any).close();
+      fancyBound = false;
+    }
+    document.body.classList.remove('lightbox-open');
+    (window as any).lenis?.start?.();
+  }
+
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', teardown);
+</script>

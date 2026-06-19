@@ -7,11 +7,14 @@ import '@fontsource-variable/bricolage-grotesque';
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import BackgroundGrid from '../components/BackgroundGrid.astro';
 import CustomCursor from '../components/CustomCursor.astro';
 import SmoothScroll from '../components/SmoothScroll.astro';
 import RevealOnScroll from '../components/RevealOnScroll.astro';
 import BackToTop from '../components/BackToTop.astro';
 import RandomCover from '../components/RandomCover.astro';
+import SearchModal from '../components/SearchModal.astro';
+import ImageLightbox from '../components/ImageLightbox.astro';
 
 interface Props {
   title: string;
@@ -56,15 +59,46 @@ const ogImage = image ? new URL(image, Astro.site).href : undefined;
     <!-- 主题防闪烁：首屏前同步应用 -->
     <script is:inline>
       (() => {
-        document.documentElement.classList.add('js');
-        const t = localStorage.getItem('theme');
-        document.documentElement.dataset.theme =
-          t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        const themeColor = { dark: '#0a0a0a', light: '#f4f1ea' };
+        const preferredTheme = () =>
+          matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        const storedTheme = () => {
+          try {
+            const value = localStorage.getItem('theme');
+            return value === 'light' || value === 'dark' ? value : null;
+          } catch {
+            return null;
+          }
+        };
+        const applyTheme = (doc = document, forcedTheme) => {
+          const theme = forcedTheme || storedTheme() || preferredTheme();
+          doc.documentElement.classList.add('js');
+          doc.documentElement.dataset.theme = theme;
+          doc
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', themeColor[theme]);
+          return theme;
+        };
+        window.__runebyteApplyTheme = applyTheme;
+        applyTheme(document);
+        if (!window.__runebyteThemeBound) {
+          window.__runebyteThemeBound = true;
+          document.addEventListener('astro:before-swap', (event) => {
+            applyTheme(event.newDocument);
+          });
+          document.addEventListener('astro:after-swap', () => {
+            applyTheme(document);
+          });
+          window.addEventListener('storage', (event) => {
+            if (event.key === 'theme') applyTheme(document);
+          });
+        }
       })();
     </script>
     <ClientRouter />
   </head>
   <body>
+    <BackgroundGrid />
     <CustomCursor />
     <SiteHeader intro={intro} />
     <main id="main">
@@ -75,6 +109,8 @@ const ogImage = image ? new URL(image, Astro.site).href : undefined;
     <RevealOnScroll />
     <BackToTop />
     <RandomCover />
+    <SearchModal />
+    <ImageLightbox />
     {intro && <slot name="intro" />}
   </body>
 </html>

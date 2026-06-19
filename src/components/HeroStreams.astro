@@ -1,0 +1,91 @@
+---
+// Hero 左侧流动线场（方案 A：周期波形线 + 单 transform 平移，无缝循环）。
+// 不卡的关键：每帧只动一个内层元素的 translateY（GPU 合成、零重绘）；线条本身是构建期算好的静态 SVG。
+// 观感：一束在大字背后缓缓流动的细弧，右缘渐隐、不碰红瞳，填补左侧空白。reduced-motion 下全局自动静止。
+const W = 420; // viewBox 宽
+const H = 320; // 垂直周期：内层移动一个 H = 无缝
+const TILES = 2; // 画两段周期
+const N = 16; // 线条数
+const STEP = 16; // 采样步长
+
+const lines = Array.from({ length: N }, (_, i) => {
+  const baseX = (W / (N - 1)) * i;
+  const amp = 14 + (i % 5) * 7; // 振幅错落，制造交叠的「束」感
+  const phase = (i * 0.7) % (Math.PI * 2);
+  let d = '';
+  for (let y = 0; y <= H * TILES; y += STEP) {
+    const x = (baseX + amp * Math.sin((2 * Math.PI * y) / H + phase)).toFixed(1);
+    d += `${y ? 'L' : 'M'}${x} ${y} `;
+  }
+  return { d: d.trim(), w: (0.6 + (i % 4) * 0.18).toFixed(2) };
+});
+---
+
+<div class="streams" aria-hidden="true">
+  <div class="streams-move">
+    <svg viewBox={`0 0 ${W} ${H * TILES}`} preserveAspectRatio="none" focusable="false">
+      {lines.map((l) => <path d={l.d} stroke="currentColor" stroke-width={l.w} fill="none" />)}
+    </svg>
+  </div>
+</div>
+
+<style>
+  .streams {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: clamp(420px, 56vw, 920px);
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    color: var(--fg);
+    /* 斜置成对角流向；右缘 + 上下渐隐，溶进黑底、不碰红瞳/正文 */
+    transform: rotate(-14deg) scale(1.25);
+    transform-origin: 30% 40%;
+    -webkit-mask-image: linear-gradient(
+      105deg,
+      transparent 0%,
+      #000 14%,
+      #000 50%,
+      transparent 82%
+    );
+    mask-image: linear-gradient(105deg, transparent 0%, #000 14%, #000 50%, transparent 82%);
+    contain: paint;
+  }
+  .streams-move {
+    width: 100%;
+    height: 200%; /* 两段周期：移动一段实现无缝 */
+    will-change: transform; /* 仅此一个常驻合成层 */
+    animation: streamFlow 26s linear infinite;
+  }
+  .streams-move svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .streams path {
+    stroke-opacity: 0.13;
+  }
+  [data-theme='light'] .streams path {
+    stroke-opacity: 0.1;
+  }
+  @keyframes streamFlow {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-50%); /* 上移一个周期 H */
+    }
+  }
+
+  /* 窄屏：缩到不抢正文，再淡一点 */
+  @media (max-width: 720px) {
+    .streams {
+      width: 90%;
+    }
+    .streams path {
+      stroke-opacity: 0.09;
+    }
+  }
+</style>

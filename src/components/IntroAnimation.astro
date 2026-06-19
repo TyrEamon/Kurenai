@@ -76,6 +76,7 @@ const letters = name.split('');
 
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       remove();
+      window.dispatchEvent(new CustomEvent('runebyte:intro-done'));
       return;
     }
 
@@ -113,6 +114,7 @@ const letters = name.split('');
       done = true;
       document.body.style.overflow = '';
       remove();
+      window.dispatchEvent(new CustomEvent('runebyte:intro-done'));
     };
     redAnim.addEventListener('finish', finish);
 

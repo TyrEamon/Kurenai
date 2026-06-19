@@ -1,0 +1,172 @@
+---
+---
+
+<style is:global>
+  .prose img[data-fancybox],
+  .art-cover img[data-fancybox] {
+    cursor: zoom-in;
+  }
+
+  .prose img[data-fancybox].loaded:hover {
+    filter: saturate(1.04) contrast(1.02);
+    transform: translateY(-1px);
+  }
+
+  .art-cover:hover img[data-fancybox] {
+    filter: saturate(1.04) contrast(1.02);
+    transform: scale(1.015);
+  }
+
+  .fancybox__container {
+    --fancybox-bg: color-mix(in srgb, var(--bg) 78%, rgba(0, 0, 0, 0.86));
+    --fancybox-color: var(--fg);
+    --fancybox-accent-color: var(--accent);
+    --fancybox-content-color: var(--fg);
+    --f-button-width: 2.25rem;
+    --f-button-height: 2.25rem;
+    --f-button-border-radius: 6px;
+    --f-button-color: var(--fg-dim);
+    --f-button-hover-color: var(--fg);
+    --f-button-bg: color-mix(in srgb, var(--bg) 72%, transparent);
+    --f-button-hover-bg: color-mix(in srgb, var(--accent) 7%, var(--bg));
+    backdrop-filter: blur(16px);
+  }
+
+  .f-carousel__toolbar {
+    padding: 0.65rem;
+  }
+
+  .f-carousel__toolbar .f-button,
+  .fancybox__nav .f-button {
+    border: 1px solid var(--line);
+    box-shadow: none;
+    transition:
+      color 0.2s ease,
+      border-color 0.2s ease,
+      background 0.2s ease,
+      transform 0.2s var(--ease);
+  }
+
+  .f-carousel__toolbar .f-button:hover,
+  .fancybox__nav .f-button:hover {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+  }
+
+  .f-counter {
+    color: var(--fg-faint);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+  }
+
+  .f-caption,
+  .fancybox__caption {
+    color: var(--fg-faint);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  body.lightbox-open .to-top {
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  import { Fancybox, PanzoomAction } from '@fancyapps/ui';
+  import '@fancyapps/ui/dist/fancybox/fancybox.css';
+
+  type FancyboxConstructor = typeof Fancybox;
+
+  let cleanupFancybox: (() => void) | null = null;
+  let contentCloseTimer = 0;
+
+  const selector = '.art-cover > img, .prose img:not(.thanks-avatar):not([data-no-lightbox])';
+
+  function setupImageLinks() {
+    document.querySelectorAll<HTMLImageElement>(selector).forEach((img) => {
+      if (img.closest('[data-no-lightbox], .thanks-card, .gh-card, .music-card, .video-embed, .fv-player-root')) {
+        return;
+      }
+      const src = img.currentSrc || img.src || img.getAttribute('src') || '';
+      if (!src || src.startsWith('data:')) return;
+
+      img.dataset.fancybox = 'article-images';
+      img.dataset.src = src;
+
+      const caption = img.closest('figure')?.querySelector('figcaption')?.textContent?.trim() || img.alt.trim();
+      if (caption) img.dataset.caption = caption;
+      else img.removeAttribute('data-caption');
+
+      img.setAttribute('data-cursor', '');
+    });
+  }
+
+  function bindFancybox() {
+    cleanupFancybox?.();
+    cleanupFancybox = null;
+
+    setupImageLinks();
+
+    const fancybox = Fancybox as FancyboxConstructor;
+    fancybox.bind('[data-fancybox="article-images"]', {
+      backdropClick: 'close',
+      dragToClose: true,
+      Carousel: {
+        Toolbar: {
+          display: {
+            left: ['counter'],
+            middle: [],
+            right: ['zoomIn', 'zoomOut', 'close'],
+          },
+        },
+        Zoomable: {
+          Panzoom: {
+            clickAction: false,
+            singleClickAction: false,
+            dblClickAction: PanzoomAction.Zoom,
+            wheelAction: PanzoomAction.Zoom,
+            protected: false,
+          },
+        },
+      },
+      on: {
+        init: () => {
+          document.body.classList.add('lightbox-open');
+          (window as any).lenis?.stop?.();
+        },
+        destroy: () => {
+          window.clearTimeout(contentCloseTimer);
+          document.body.classList.remove('lightbox-open');
+          (window as any).lenis?.start?.();
+        },
+        'Carousel.click': (api, _carousel, event) => {
+          const target = event.target as HTMLElement | null;
+          if (!target || target.closest('.f-button, [data-panzoom-action]')) return;
+          if (!target.closest('.f-panzoom__content, .f-panzoom__wrapper, .fancybox__slide')) return;
+          window.clearTimeout(contentCloseTimer);
+          contentCloseTimer = window.setTimeout(() => api.close(event), 240);
+        },
+        'Carousel.panzoom:dblClick': () => {
+          window.clearTimeout(contentCloseTimer);
+        },
+      },
+    });
+
+    cleanupFancybox = () => {
+      window.clearTimeout(contentCloseTimer);
+      fancybox.unbind('[data-fancybox="article-images"]');
+      fancybox.close();
+      document.body.classList.remove('lightbox-open');
+      (window as any).lenis?.start?.();
+    };
+  }
+
+  document.addEventListener('astro:page-load', bindFancybox);
+  document.addEventListener('astro:after-swap', bindFancybox);
+  document.addEventListener('astro:before-swap', () => {
+    cleanupFancybox?.();
+    cleanupFancybox = null;
+  });
+</script>

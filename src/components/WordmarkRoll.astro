@@ -1,0 +1,44 @@
+---
+// 字标逐字「卷帘」hover：text-shadow 伪造同字副本，悬停滚入。
+// 自身 :hover 触发；尺寸全用 em 相对单位 → 顶栏小字标 / 页脚巨型字标共用，随父级字号自适应。
+// 错峰只在入场(hover 态加 transition-delay)，退场齐收不拖沓；纯 CSS，reduced-motion 自动静默。
+// 装饰层 aria-hidden；可读名由外层(<a aria-label> / aria-hidden 容器)负责。
+interface Props {
+  text: string;
+  class?: string;
+}
+const { text, class: className } = Astro.props;
+const chars = [...text];
+---
+
+<span class:list={['wm-roll', className]} aria-hidden="true">
+  {
+    chars.map((ch, i) => (
+      <span class:list={['wm-ch', { 'wm-ch-dot': ch === '.' }]} style={`--i:${i}`}>
+        {ch}
+      </span>
+    ))
+  }
+</span>
+
+<style>
+  .wm-roll {
+    display: inline-flex;
+    overflow: hidden;
+    line-height: 1.1; /* 裁切窗高；与下方 1.1em 三处保持一致(改幅度需同步) */
+  }
+  .wm-ch {
+    display: inline-block;
+    text-shadow: 0 1.1em currentColor; /* 正下方一份同字副本 */
+    transition: transform 0.3s var(--ease);
+  }
+  .wm-ch-dot {
+    color: var(--accent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .wm-roll:hover .wm-ch {
+      transform: translateY(-1.1em);
+      transition-delay: calc(var(--i) * 22ms);
+    }
+  }
+</style>

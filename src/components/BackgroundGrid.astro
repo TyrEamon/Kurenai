@@ -1,0 +1,43 @@
+---
+// 全站背景：瑞士风极简版式辅助线 + 交点红点「节点」。
+// 构形(忠于 cover-hello.svg)：2 竖 + 2 横 1px 线落在视口 25%/75%，拼成 3×3；红点在 (75%,25%) 交点。
+// 固定视口层(position:fixed)，沉到所有内容之后(z-index:-1)、页面底色之上 → 杂志封面/取景框的稳定框感。
+// 线色 var(--fg) / 点色 var(--accent) 随主题翻转(暗:浅线 / 浅:深线)；静态层，reduced-motion 安全。
+---
+
+<div class="bg-grid" aria-hidden="true">
+  <svg width="100%" height="100%" preserveAspectRatio="none" focusable="false">
+    <g class="bg-grid-lines">
+      <line x1="25%" y1="0" x2="25%" y2="100%"></line>
+      <line x1="75%" y1="0" x2="75%" y2="100%"></line>
+      <line x1="0" y1="25%" x2="100%" y2="25%"></line>
+      <line x1="0" y1="75%" x2="100%" y2="75%"></line>
+    </g>
+    <circle class="bg-grid-dot" cx="75%" cy="25%" r="4"></circle>
+  </svg>
+</div>
+
+<style>
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: -1; /* 沉到内容之后、页面底色之上 */
+    pointer-events: none;
+  }
+  .bg-grid svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .bg-grid-lines line {
+    stroke: var(--fg);
+    stroke-opacity: 0.09; /* 极淡，可在 0.08–0.12 间微调 */
+    stroke-width: 1;
+    shape-rendering: crispEdges; /* 轴对齐线吸附像素网格，保 1px 锐利 */
+    transition: stroke 0.35s var(--ease); /* 与主题切换同拍 */
+  }
+  .bg-grid-dot {
+    fill: var(--accent);
+    transition: fill 0.35s var(--ease);
+  }
+</style>

@@ -1,61 +1,134 @@
 ---
-// 回到顶部：滚动一定距离后出现，点击平滑滚回顶部。
+import { Icon } from 'astro-icon/components';
 ---
-<button class="to-top" type="button" aria-label="回到顶部" data-cursor>↑</button>
+
+<button class="to-top" type="button" aria-label="回到顶部" data-cursor>
+  <Icon name="lucide:arrow-up" aria-hidden="true" />
+</button>
 
 <style>
   .to-top {
     position: fixed;
-    bottom: 1.6rem;
-    right: 1.6rem;
+    right: 1.35rem;
+    bottom: 1.35rem;
     z-index: 45;
-    width: 2.6rem;
-    height: 2.6rem;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    background: color-mix(in srgb, var(--bg) 80%, transparent);
-    backdrop-filter: blur(8px);
-    color: var(--fg-dim);
-    font-size: 1rem;
-    line-height: 1;
+    width: 2.45rem;
+    height: 2.45rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    color: var(--fg-faint);
+    box-shadow: none;
+    backdrop-filter: blur(12px);
     cursor: pointer;
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate3d(0, 10px, 0);
     pointer-events: none;
-    transition: opacity 0.3s, transform 0.3s var(--ease), color 0.2s, border-color 0.2s;
+    transition:
+      opacity 0.28s var(--ease),
+      transform 0.28s var(--ease),
+      color 0.2s ease,
+      border-color 0.2s ease,
+      background 0.2s ease;
   }
+
+  .to-top::before {
+    content: '';
+    position: absolute;
+    left: 0.55rem;
+    right: 0.55rem;
+    top: -1px;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.28s var(--ease);
+  }
+
+  .to-top :global(svg) {
+    width: 1rem;
+    height: 1rem;
+    stroke-width: 1.8;
+  }
+
   .to-top.show {
     opacity: 1;
     transform: none;
     pointer-events: auto;
   }
+
   .to-top:hover {
-    color: var(--accent);
-    border-color: var(--accent);
+    color: var(--fg);
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+    background: color-mix(in srgb, var(--accent) 7%, var(--bg));
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .to-top:hover::before {
+    transform: scaleX(1);
+  }
+
+  .to-top:active {
+    transform: translate3d(0, 0, 0) scale(0.96);
+  }
+
+  :global(body.lightbox-open) .to-top {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (max-width: 680px) {
+    .to-top {
+      right: 1rem;
+      bottom: 1rem;
+      width: 2.35rem;
+      height: 2.35rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .to-top,
+    .to-top::before {
+      transition: none;
+    }
   }
 </style>
 
 <script>
   let off: (() => void) | null = null;
+
   function initTop() {
     off?.();
     off = null;
+
     const btn = document.querySelector<HTMLButtonElement>('.to-top');
     if (!btn) return;
+
     const onScroll = () => btn.classList.toggle('show', window.scrollY > innerHeight * 0.8);
     const onClick = () => {
-      const l = (window as any).lenis;
-      if (l) l.scrollTo(0, { duration: 1.0 });
-      else scrollTo({ top: 0, behavior: 'smooth' });
+      const lenis = (window as any).lenis;
+      if (lenis) {
+        lenis.scrollTo(0, {
+          duration: 0.9,
+          easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     };
-    addEventListener('scroll', onScroll, { passive: true });
+
+    window.addEventListener('scroll', onScroll, { passive: true });
     btn.addEventListener('click', onClick);
     onScroll();
+
     off = () => {
-      removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', onScroll);
       btn.removeEventListener('click', onClick);
     };
   }
+
   document.addEventListener('astro:page-load', initTop);
   document.addEventListener('astro:before-swap', () => {
     off?.();

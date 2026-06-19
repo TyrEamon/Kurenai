@@ -8,12 +8,15 @@
     "build": "astro build && pagefind",
     "build:fast": "astro build",
     "preview": "astro preview",
+    "preview:worker": "npm run build && wrangler dev",
+    "deploy:worker": "npm run build && wrangler deploy",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/mdx": "^6.0.3",
     "@astrojs/rss": "^4.0.18",
     "@astrojs/sitemap": "^3.7.3",
+    "@fancyapps/ui": "^6.1.14",
     "@fontsource-variable/bricolage-grotesque": "^5.0.0",
     "@fontsource-variable/inter": "^5.0.0",
     "@fontsource-variable/jetbrains-mono": "^5.0.0",
@@ -23,13 +26,16 @@
     "astro": "^6.4.8",
     "astro-icon": "^1.1.5",
     "hastscript": "^9.0.1",
+    "imagesloaded": "^5.0.0",
     "lenis": "^1.1.0",
+    "masonry-layout": "^4.2.2",
     "rehype-callouts": "^2.2.0",
     "remark-directive": "^4.0.0",
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
     "gray-matter": "^4.0.3",
-    "pagefind": "^1.5.2"
+    "pagefind": "^1.5.2",
+    "wrangler": "^4.102.0"
   }
 }

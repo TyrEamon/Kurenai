@@ -1,0 +1,239 @@
+---
+import { Icon } from 'astro-icon/components';
+import { profile } from '../data/profile';
+import type { Post } from '../lib/posts';
+import GiscusComments from './GiscusComments.astro';
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const authorUrl = profile.socials.find((item) => item.label === 'GitHub')?.url ?? 'https://github.com/TyrEamon';
+const contactHref = `${base}about/#contact`;
+const licenseUrl = 'https://creativecommons.org/licenses/by-nc-sa/4.0/';
+const articleUrl = Astro.url.toString();
+const displayUrl = articleUrl.replace(/^https?:\/\//, '').replace(/\/$/, '/');
+const published = post.data.published.toISOString().slice(0, 10);
+---
+
+<section class="article-after" aria-label="文章补充信息" data-pagefind-ignore>
+  <section class="help-card">
+    <div class="help-copy">
+      <span class="help-icon" aria-hidden="true"><Icon name="lucide:circle-help" /></span>
+      <div>
+        <h2>这篇文章是否对你有帮助？</h2>
+        <p>如果哪里写错了，或者你有更好的补充，欢迎把线索丢给我。</p>
+      </div>
+    </div>
+    <a class="help-action" href={contactHref} data-cursor>
+      <Icon name="lucide:mail" aria-hidden="true" />
+      <span>联系</span>
+    </a>
+  </section>
+
+  <section class="license-card" aria-label="文章版权许可">
+    <div class="license-copy">
+      <a class="license-title" href={articleUrl} data-cursor>{post.data.title}</a>
+      <a class="license-url" href={articleUrl} data-cursor>{displayUrl}</a>
+    </div>
+    <div class="license-meta">
+      <div>
+        <span>作者</span>
+        <a href={authorUrl} target="_blank" rel="noopener noreferrer" data-cursor>TyrEamon</a>
+      </div>
+      <div>
+        <span>发布于</span>
+        <time datetime={published}>{published}</time>
+      </div>
+      <div>
+        <span>许可协议</span>
+        <a href={licenseUrl} target="_blank" rel="noopener noreferrer" data-cursor>CC BY-NC-SA 4.0</a>
+      </div>
+    </div>
+    <span class="license-mark" aria-hidden="true">CC</span>
+  </section>
+
+  <GiscusComments />
+</section>
+
+<style>
+  .article-after {
+    display: grid;
+    gap: 1rem;
+    margin-top: 4rem;
+  }
+  .help-card,
+  .license-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-soft) 58%, transparent);
+  }
+  .help-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    padding: 1rem 1.1rem;
+  }
+  .help-copy {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+  .help-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
+    border-radius: 6px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+  .help-icon :global(svg) {
+    width: 1rem;
+    height: 1rem;
+  }
+  .help-copy h2 {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.35;
+    color: var(--fg);
+  }
+  .help-copy p {
+    margin: 0.18rem 0 0;
+    color: var(--fg-faint);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+  .help-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.78rem;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--fg-dim);
+    font-size: 0.82rem;
+    transition:
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms var(--ease);
+  }
+  .help-action:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 54%, var(--line));
+    transform: translateY(-1px);
+  }
+  .help-action :global(svg) {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+  .license-card {
+    position: relative;
+    overflow: hidden;
+    padding: 1.2rem 1.3rem;
+  }
+  .license-copy,
+  .license-meta {
+    position: relative;
+    z-index: 1;
+  }
+  .license-title {
+    display: block;
+    max-width: 48rem;
+    color: var(--fg);
+    font-weight: 700;
+    line-height: 1.45;
+    text-wrap: pretty;
+    transition: color 180ms ease;
+  }
+  .license-title:hover {
+    color: var(--accent);
+  }
+  .license-url {
+    display: inline-block;
+    max-width: min(100%, 42rem);
+    margin-top: 0.22rem;
+    color: var(--fg-dim);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    transition: color 180ms ease;
+  }
+  .license-url:hover {
+    color: var(--accent);
+  }
+  .license-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, max-content));
+    gap: clamp(1.4rem, 6vw, 4rem);
+    margin-top: 1rem;
+  }
+  .license-meta div {
+    min-width: 0;
+  }
+  .license-meta span {
+    display: block;
+    margin-bottom: 0.16rem;
+    color: var(--fg-faint);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+  .license-meta a,
+  .license-meta time {
+    color: var(--fg-dim);
+    font-size: 0.9rem;
+    transition: color 180ms ease;
+  }
+  .license-meta a:hover {
+    color: var(--accent);
+  }
+  .license-mark {
+    position: absolute;
+    right: 1.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-size: clamp(5rem, 16vw, 10rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    opacity: 0.035;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  @media (max-width: 760px) {
+    .article-after {
+      margin-top: 3rem;
+    }
+    .help-card {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .help-action {
+      width: 100%;
+    }
+    .license-meta {
+      grid-template-columns: 1fr;
+      gap: 0.7rem;
+    }
+    .license-mark {
+      right: 0.2rem;
+      top: auto;
+      bottom: -0.8rem;
+      transform: none;
+      font-size: 5.2rem;
+    }
+  }
+</style>

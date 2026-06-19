@@ -1,0 +1,486 @@
+---
+// 站内搜索浮层（命令面板式）：替代独立搜索页的即时体验。
+// 引擎用 Pagefind JS API（构建后 dist/pagefind/ 生成索引），UI 全自定义贴合本站。
+// 触发：header 的 .search-trigger 按钮、⌘/Ctrl+K、英文输入态下按 /。
+// 注意：Pagefind 索引在 `npm run build`(含 pagefind) 后才有；dev 下降级为提示。
+---
+
+<div id="search-overlay" class="search-overlay" role="dialog" aria-modal="true" aria-label="站内搜索" aria-hidden="true" data-lenis-prevent>
+  <div class="so-backdrop" data-close></div>
+  <div class="so-panel" role="document">
+    <div class="so-bar">
+      <svg class="so-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input
+        class="so-input"
+        type="search"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        placeholder="搜索文章 / 手记 / 标签 / 路径…"
+        aria-label="搜索关键词"
+      />
+      <button class="so-close" type="button" data-close aria-label="关闭搜索">esc</button>
+    </div>
+    <div class="so-results" role="listbox" aria-label="搜索结果" data-lenis-prevent>
+      <p class="so-msg">输入关键词，开始搜索全站文章与手记。</p>
+    </div>
+    <div class="so-foot" aria-hidden="true">
+      <span class="so-hint"><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+      <span class="so-hint"><kbd>↵</kbd> 打开</span>
+      <span class="so-hint"><kbd>esc</kbd> 关闭</span>
+      <span class="so-by">由 Pagefind 驱动</span>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: clamp(1rem, 12vh, 9rem) 1rem 2rem;
+    opacity: 0;
+    visibility: hidden;
+    overscroll-behavior: contain;
+    transition: opacity 0.25s var(--ease), visibility 0.25s var(--ease);
+  }
+  .search-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .so-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--bg) 55%, rgba(0, 0, 0, 0.55));
+    backdrop-filter: blur(6px);
+  }
+  .so-panel {
+    position: relative;
+    width: min(640px, 100%);
+    max-height: min(70vh, 640px);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    transform: translateY(-14px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.32s var(--ease), opacity 0.32s var(--ease);
+  }
+  .search-overlay.open .so-panel {
+    transform: none;
+    opacity: 1;
+  }
+
+  /* 输入条 */
+  .so-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.95rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .so-ico {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    color: var(--fg-faint);
+  }
+  .so-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    caret-color: var(--accent);
+  }
+  .so-input::placeholder {
+    color: var(--fg-faint);
+  }
+  .so-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+  .so-close {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--fg-faint);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .so-close:hover {
+    color: var(--fg);
+    border-color: var(--line-strong);
+  }
+
+  /* 结果区 */
+  .so-results {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  .so-msg {
+    padding: 1.6rem 1rem;
+    text-align: center;
+    color: var(--fg-faint);
+    font-size: 0.9rem;
+  }
+  .so-msg code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    color: var(--fg-dim);
+  }
+
+  .so-link {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    border-radius: 9px;
+    color: inherit;
+    scroll-margin: 0.5rem;
+  }
+  .so-link:hover {
+    background: color-mix(in srgb, var(--fg) 5%, transparent);
+  }
+  .so-link.active {
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .so-top {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .so-cat {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .so-title {
+    font-family: var(--font-zh-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: var(--fg);
+  }
+  .so-excerpt {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--fg-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .so-excerpt mark {
+    background: none;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  /* 子结果（命中的小节，跳转到锚点） */
+  .so-sub {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.1rem 0 0.1rem 0.85rem;
+    padding: 0.4rem 0.7rem;
+    border-left: 1px solid var(--line);
+    border-radius: 0 7px 7px 0;
+    color: var(--fg-dim);
+    font-size: 0.82rem;
+  }
+  .so-sub::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--line-strong);
+    flex-shrink: 0;
+  }
+  .so-sub:hover {
+    background: color-mix(in srgb, var(--fg) 5%, transparent);
+  }
+  .so-sub.active {
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+    color: var(--fg);
+  }
+  .so-sub .st {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 页脚快捷键 */
+  .so-foot {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+  .so-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .so-by {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+  }
+  .so-foot kbd,
+  .so-msg kbd {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    line-height: 1;
+    padding: 0.18rem 0.34rem;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--fg-dim);
+  }
+
+  html.search-lock {
+    overflow: hidden;
+  }
+
+  @media (max-width: 560px) {
+    .so-foot .so-hint {
+      display: none;
+    }
+    .so-by {
+      margin-left: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .search-overlay,
+    .so-panel {
+      transition: opacity 0.001ms;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const BASE = import.meta.env.BASE_URL;
+  const MAX_RESULTS = 8;
+
+  // ---- Pagefind 懒加载（首次打开时） ----
+  let pfPromise: Promise<any> | null = null;
+  function loadPagefind(): Promise<any> {
+    if (pfPromise) return pfPromise;
+    const url = `${BASE}pagefind/pagefind.js`;
+    pfPromise = import(/* @vite-ignore */ url).catch(() => null);
+    return pfPromise;
+  }
+
+  const $ = () => document.getElementById('search-overlay');
+  let lastFocus: HTMLElement | null = null;
+
+  function isTyping(): boolean {
+    const a = document.activeElement as HTMLElement | null;
+    if (!a) return false;
+    const tag = a.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || a.isContentEditable;
+  }
+
+  function openSearch() {
+    const el = $();
+    if (!el || el.classList.contains('open')) return;
+    lastFocus = document.activeElement as HTMLElement;
+    el.classList.add('open');
+    el.setAttribute('aria-hidden', 'false');
+    document.documentElement.classList.add('search-lock');
+    (window as any).lenis?.stop?.();
+    loadPagefind(); // 预热索引
+    const input = el.querySelector<HTMLInputElement>('.so-input');
+    requestAnimationFrame(() => input?.focus());
+  }
+  function closeSearch() {
+    const el = $();
+    if (!el || !el.classList.contains('open')) return;
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden', 'true');
+    document.documentElement.classList.remove('search-lock');
+    (window as any).lenis?.start?.();
+    lastFocus?.focus?.();
+  }
+  // 供 /search/ 启动器调用
+  (window as any).__openSearch = openSearch;
+
+  const esc = (s: string) =>
+    String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string,
+    );
+
+  function msg(html: string) {
+    const box = $()?.querySelector<HTMLElement>('.so-results');
+    if (box) box.innerHTML = `<p class="so-msg">${html}</p>`;
+  }
+
+  function resultHTML(d: any): string {
+    const cat = d?.meta?.category ? `<span class="so-cat">${esc(d.meta.category)}</span>` : '';
+    const title = esc(d?.meta?.title || '未命名');
+    const excerpt = d?.excerpt || ''; // Pagefind 返回的安全 HTML（含 <mark>）
+    const subs = (d?.sub_results || [])
+      .filter((s: any) => s.url && s.url !== d.url)
+      .slice(0, 2)
+      .map(
+        (s: any) =>
+          `<a class="so-sub so-link" href="${esc(s.url)}"><span class="st">${esc(s.title || '')}</span></a>`,
+      )
+      .join('');
+    return (
+      `<a class="so-item so-link" href="${esc(d.url)}">` +
+      `<span class="so-top">${cat}<span class="so-title">${title}</span></span>` +
+      `<p class="so-excerpt">${excerpt}</p>` +
+      `</a>` +
+      subs
+    );
+  }
+
+  let activeIdx = -1;
+  function links(): HTMLAnchorElement[] {
+    return Array.from($()?.querySelectorAll<HTMLAnchorElement>('.so-link') || []);
+  }
+  function setActive(i: number) {
+    const ls = links();
+    if (!ls.length) return;
+    activeIdx = (i + ls.length) % ls.length;
+    ls.forEach((l, idx) => l.classList.toggle('active', idx === activeIdx));
+    ls[activeIdx].scrollIntoView({ block: 'nearest' });
+  }
+
+  let token = 0;
+  async function runSearch(raw: string) {
+    const q = raw.trim();
+    const mine = ++token;
+    if (!q) {
+      msg('输入关键词，开始搜索全站文章与手记。');
+      return;
+    }
+    const pf = await loadPagefind();
+    if (mine !== token) return;
+    if (!pf) {
+      msg('搜索索引尚未生成。<br>本地请用 <code>npm run build</code> 后 <code>npm run preview</code> 查看，线上正常可用。');
+      return;
+    }
+    const search = await pf.debouncedSearch(q, {}, 140);
+    if (search === null || mine !== token) return; // 被更新的查询取代
+    const top = search.results.slice(0, MAX_RESULTS);
+    if (!top.length) {
+      msg(`没有找到与 “${esc(q)}” 相关的内容。`);
+      return;
+    }
+    const data = await Promise.all(top.map((r: any) => r.data()));
+    if (mine !== token) return;
+    const box = $()?.querySelector<HTMLElement>('.so-results');
+    if (box) box.innerHTML = data.map(resultHTML).join('');
+    setActive(0);
+  }
+
+  // ---- 事件绑定（overlay 元素级，跨 ClientRouter 重新绑定） ----
+  function bindOverlay() {
+    const el = $();
+    if (!el || el.dataset.bound) return;
+    el.dataset.bound = '1';
+    const input = el.querySelector<HTMLInputElement>('.so-input')!;
+    input.addEventListener('input', () => runSearch(input.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActive(activeIdx + 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActive(activeIdx - 1);
+      } else if (e.key === 'Enter') {
+        const a = links()[activeIdx];
+        if (a) {
+          e.preventDefault();
+          closeSearch();
+          a.click();
+        }
+      }
+    });
+    el.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-close]')) {
+        e.preventDefault();
+        closeSearch();
+      } else if (t.closest('.so-link')) {
+        closeSearch(); // 让锚点继续导航（ClientRouter 接管）
+      }
+    });
+    // 鼠标移到结果上时同步高亮
+    el.addEventListener('pointermove', (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('.so-link');
+      if (!a) return;
+      const idx = links().indexOf(a);
+      if (idx >= 0 && idx !== activeIdx) setActive(idx);
+    });
+  }
+
+  // ---- 全局触发（document 级，只绑定一次） ----
+  function onTriggerClick(e: MouseEvent) {
+    const t = e.target as HTMLElement;
+    if (t.closest?.('.search-trigger')) {
+      e.preventDefault();
+      openSearch();
+    }
+  }
+  function onKeydown(e: KeyboardEvent) {
+    const open = $()?.classList.contains('open');
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      open ? closeSearch() : openSearch();
+      return;
+    }
+    if (!open) {
+      if (e.key === '/' && !isTyping()) {
+        e.preventDefault();
+        openSearch();
+      }
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSearch();
+    }
+  }
+
+  if (!(window as any).__searchGlobalBound) {
+    (window as any).__searchGlobalBound = true;
+    document.addEventListener('click', onTriggerClick);
+    document.addEventListener('keydown', onKeydown);
+  }
+  document.addEventListener('astro:page-load', bindOverlay);
+  document.addEventListener('astro:before-swap', closeSearch);
+</script>
