@@ -147,11 +147,6 @@ const base = import.meta.env.BASE_URL;
     line-height: 0;
     opacity: 0;
     transition: opacity 0.45s var(--ease);
-    /* 屏幕外的单元跳过渲染/灰度滤镜栅格化：整墙滚到几百张时，
-       关灯箱触发的整页重绘只需重栅格「当前可见的十几张」，而非全墙。
-       这是长图墙滚动/重绘卡顿的关键优化，且不改变任何视觉。 */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 240px;
   }
   #gallery .gal-item.is-loaded {
     opacity: 1;
