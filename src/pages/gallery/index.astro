@@ -161,12 +161,15 @@ const base = import.meta.env.BASE_URL;
   }
   /* 彩色墙：去掉一切去色滤镜/混合层。关灯箱全屏重绘不再逐张栅格化滤镜层
      → 从根上消除「关闭卡一下、整墙刷一下」。悬停仅做轻微放大 + 边框/角标高亮。 */
+  /* 灰度档案墙：整墙去色，悬停单张复色。加回验证——若开关灯箱仍流畅，
+     则证明之前的卡顿罪魁祸首是缩略图条纹理抖动，而非去色重绘。 */
   #gallery .gal-frame img {
     display: block;
     width: 100%;
     height: auto;
     transform-origin: center;
-    transition: transform 0.45s var(--ease);
+    filter: grayscale(1);
+    transition: transform 0.45s var(--ease), filter 0.45s var(--ease);
   }
   /* 等宽索引号（右下角，hover 浮出） */
   #gallery .gal-idx {
@@ -219,6 +222,7 @@ const base = import.meta.env.BASE_URL;
     }
     #gallery .gal-item:hover .gal-frame img {
       transform: scale(1.03);
+      filter: grayscale(0);
     }
     #gallery .gal-item:hover .gal-idx,
     #gallery .gal-item:hover .gal-frame::before,
@@ -506,27 +510,29 @@ const base = import.meta.env.BASE_URL;
       backdropClick: 'close',
       dragToClose: true,
       // 本站全局隐藏了滚动条，Fancybox 锁滚动无宽度补偿跳变。
-      // 彩色墙(无 filter)下，lenis.stop()/start() 已不会触发昂贵的整墙滤镜重栅格，
-      // 故恢复：开灯箱冻结平滑滚动、关灯箱复原，行为与文章图灯箱一致。
+      // 关键：不调用 lenis.stop()/start()——lenis.start() 关灯箱时会重测这面超高墙的
+      // 滚动尺寸并强制同步重排，正是「整墙刷一下/像重新加载」的独立根因(与去色无关)。
+      // 平滑滚动本身保留(页面照常 Lenis)，只是灯箱开关不去碰它。
       hideScrollbar: true,
       Carousel: {
         Toolbar: {
           display: {
             left: ['counter'],
             middle: ['zoomIn', 'zoomOut', 'rotateCW'],
-            right: ['slideshow', 'thumbs', 'fullscreen', 'close'],
+            right: ['slideshow', 'fullscreen', 'close'],
           },
         },
-        Thumbs: { type: 'classic' },
+        // 缩略图条(Thumbs)会为组内每张幻灯片渲染一张缩略图，而本画廊没有独立缩略图 URL
+        // → 缩略图条把整组(初始 24 张起)全尺寸 webp 全部解码进 GPU 纹理。反复开关灯箱会
+        //   不断重解码 → 纹理缓存抖动 → 4~5 次后开始掉帧。直接关掉缩略图条即可根治。
+        Thumbs: false,
       },
       on: {
         init: () => {
           document.body.classList.add('lightbox-open');
-          (window as any).lenis?.stop?.();
         },
         destroy: () => {
           document.body.classList.remove('lightbox-open');
-          (window as any).lenis?.start?.();
         },
       },
     });
@@ -571,7 +577,6 @@ const base = import.meta.env.BASE_URL;
       fancyBound = false;
     }
     document.body.classList.remove('lightbox-open');
-    (window as any).lenis?.start?.();
   }
 
   document.addEventListener('astro:page-load', init);
