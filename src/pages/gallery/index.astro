@@ -159,14 +159,25 @@ const base = import.meta.env.BASE_URL;
     background: var(--bg-soft);
     transition: border-color 0.25s var(--ease);
   }
-  /* 整墙默认灰度（黑白档案墙）；彩色是悬停/灯箱才兑现的奖励 */
+  /* 整墙默认灰度（黑白档案墙）；彩色是悬停/灯箱才兑现的奖励。
+     去色改用叠加的 saturation 混合层(.gal-veil)，不给 <img> 加 filter：
+     filter:grayscale 会让每张图各成一个滤镜合成层，关灯箱/滚动时逐张重栅格
+     → 就是你看到的「整墙刷一下、卡一下」。混合层只做一次去饱和合成，便宜得多。 */
   #gallery .gal-frame img {
     display: block;
     width: 100%;
     height: auto;
-    filter: grayscale(1) contrast(1.02) brightness(0.97);
     transform-origin: center;
-    transition: filter 0.45s var(--ease), transform 0.45s var(--ease);
+    transition: transform 0.45s var(--ease);
+  }
+  #gallery .gal-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #808080;
+    mix-blend-mode: saturation;
+    pointer-events: none;
+    transition: opacity 0.45s var(--ease);
   }
   /* 等宽索引号（右下角，hover 浮出） */
   #gallery .gal-idx {
@@ -217,8 +228,10 @@ const base = import.meta.env.BASE_URL;
     #gallery .gal-item:hover .gal-frame {
       border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong));
     }
+    #gallery .gal-item:hover .gal-veil {
+      opacity: 0;
+    }
     #gallery .gal-item:hover .gal-frame img {
-      filter: none;
       transform: scale(1.03);
     }
     #gallery .gal-item:hover .gal-idx,
@@ -362,11 +375,18 @@ const base = import.meta.env.BASE_URL;
     img.decoding = 'async';
     img.alt = `画廊图 #${n}`;
 
+    // 去色遮罩：用 mix-blend-mode:saturation 的灰色层代替昂贵的 filter:grayscale，
+    // 关灯箱/滚动时不再全墙重栅格滤镜层，且可平滑淡出（彩→灰不硬切）。
+    const veil = document.createElement('span');
+    veil.className = 'gal-veil';
+    veil.setAttribute('aria-hidden', 'true');
+
     const idx = document.createElement('span');
     idx.className = 'gal-idx';
     idx.textContent = `${n} / ${total}`;
 
     frame.appendChild(img);
+    frame.appendChild(veil);
     frame.appendChild(idx);
     a.appendChild(frame);
     return a;
