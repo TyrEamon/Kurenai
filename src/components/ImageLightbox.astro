@@ -18,7 +18,9 @@
   }
 
   .fancybox__container {
-    --fancybox-bg: color-mix(in srgb, var(--bg) 78%, rgba(0, 0, 0, 0.86));
+    /* 不透明深底：避免 backdrop-filter 把整墙(灰度 filter + 无限长瀑布流)逐帧模糊，
+       否则开/关灯箱会一帧闪现 + 卡顿。用带主题色调的实心底同样高级，且零合成开销。 */
+    --fancybox-bg: color-mix(in srgb, var(--bg) 82%, #000);
     --fancybox-color: var(--fg);
     --fancybox-accent-color: var(--accent);
     --fancybox-content-color: var(--fg);
@@ -29,7 +31,6 @@
     --f-button-hover-color: var(--fg);
     --f-button-bg: color-mix(in srgb, var(--bg) 72%, transparent);
     --f-button-hover-bg: color-mix(in srgb, var(--accent) 7%, var(--bg));
-    backdrop-filter: blur(16px);
   }
 
   .f-carousel__toolbar {

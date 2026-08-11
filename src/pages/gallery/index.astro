@@ -504,10 +504,12 @@ const base = import.meta.env.BASE_URL;
     (Fancybox as any).bind('[data-fancybox="gallery"]', {
       backdropClick: 'close',
       dragToClose: true,
-      // 关键：不让 Fancybox 摘掉页面滚动条。否则开/关灯箱会改变 innerWidth，
-      // 触发 resize → 整墙 Masonry 重排，关闭时看起来像「重新获取」。
-      // 背景滚动已由 lenis.stop() + Fancybox 自身的滚轮捕获兜住。
-      hideScrollbar: false,
+      // 背景滚动锁交给 Fancybox 原生处理。本站全局隐藏了滚动条
+      // (html{scrollbar-width:none}+::-webkit-scrollbar{display:none})，
+      // 所以它锁滚动时不会有滚动条补偿的宽度跳变，也就不会触发整墙重排。
+      // 关键：不再用 lenis.stop()/start()——lenis.start() 会在关灯箱瞬间
+      // 重新测量这面超高灰度墙的滚动尺寸，强制同步重排，正是那道「重新加载」闪。
+      hideScrollbar: true,
       Carousel: {
         Toolbar: {
           display: {
@@ -521,11 +523,9 @@ const base = import.meta.env.BASE_URL;
       on: {
         init: () => {
           document.body.classList.add('lightbox-open');
-          (window as any).lenis?.stop?.();
         },
         destroy: () => {
           document.body.classList.remove('lightbox-open');
-          (window as any).lenis?.start?.();
         },
       },
     });
@@ -570,7 +570,6 @@ const base = import.meta.env.BASE_URL;
       fancyBound = false;
     }
     document.body.classList.remove('lightbox-open');
-    (window as any).lenis?.start?.();
   }
 
   document.addEventListener('astro:page-load', init);
