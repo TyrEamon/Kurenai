@@ -159,25 +159,14 @@ const base = import.meta.env.BASE_URL;
     background: var(--bg-soft);
     transition: border-color 0.25s var(--ease);
   }
-  /* 整墙默认灰度（黑白档案墙）；彩色是悬停/灯箱才兑现的奖励。
-     去色改用叠加的 saturation 混合层(.gal-veil)，不给 <img> 加 filter：
-     filter:grayscale 会让每张图各成一个滤镜合成层，关灯箱/滚动时逐张重栅格
-     → 就是你看到的「整墙刷一下、卡一下」。混合层只做一次去饱和合成，便宜得多。 */
+  /* 彩色墙：去掉一切去色滤镜/混合层。关灯箱全屏重绘不再逐张栅格化滤镜层
+     → 从根上消除「关闭卡一下、整墙刷一下」。悬停仅做轻微放大 + 边框/角标高亮。 */
   #gallery .gal-frame img {
     display: block;
     width: 100%;
     height: auto;
     transform-origin: center;
     transition: transform 0.45s var(--ease);
-  }
-  #gallery .gal-veil {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: #808080;
-    mix-blend-mode: saturation;
-    pointer-events: none;
-    transition: opacity 0.45s var(--ease);
   }
   /* 等宽索引号（右下角，hover 浮出） */
   #gallery .gal-idx {
@@ -227,9 +216,6 @@ const base = import.meta.env.BASE_URL;
   @media (hover: hover) and (pointer: fine) {
     #gallery .gal-item:hover .gal-frame {
       border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong));
-    }
-    #gallery .gal-item:hover .gal-veil {
-      opacity: 0;
     }
     #gallery .gal-item:hover .gal-frame img {
       transform: scale(1.03);
@@ -375,18 +361,11 @@ const base = import.meta.env.BASE_URL;
     img.decoding = 'async';
     img.alt = `画廊图 #${n}`;
 
-    // 去色遮罩：用 mix-blend-mode:saturation 的灰色层代替昂贵的 filter:grayscale，
-    // 关灯箱/滚动时不再全墙重栅格滤镜层，且可平滑淡出（彩→灰不硬切）。
-    const veil = document.createElement('span');
-    veil.className = 'gal-veil';
-    veil.setAttribute('aria-hidden', 'true');
-
     const idx = document.createElement('span');
     idx.className = 'gal-idx';
     idx.textContent = `${n} / ${total}`;
 
     frame.appendChild(img);
-    frame.appendChild(veil);
     frame.appendChild(idx);
     a.appendChild(frame);
     return a;
@@ -526,11 +505,9 @@ const base = import.meta.env.BASE_URL;
     (Fancybox as any).bind('[data-fancybox="gallery"]', {
       backdropClick: 'close',
       dragToClose: true,
-      // 背景滚动锁交给 Fancybox 原生处理。本站全局隐藏了滚动条
-      // (html{scrollbar-width:none}+::-webkit-scrollbar{display:none})，
-      // 所以它锁滚动时不会有滚动条补偿的宽度跳变，也就不会触发整墙重排。
-      // 关键：不再用 lenis.stop()/start()——lenis.start() 会在关灯箱瞬间
-      // 重新测量这面超高灰度墙的滚动尺寸，强制同步重排，正是那道「重新加载」闪。
+      // 本站全局隐藏了滚动条，Fancybox 锁滚动无宽度补偿跳变。
+      // 彩色墙(无 filter)下，lenis.stop()/start() 已不会触发昂贵的整墙滤镜重栅格，
+      // 故恢复：开灯箱冻结平滑滚动、关灯箱复原，行为与文章图灯箱一致。
       hideScrollbar: true,
       Carousel: {
         Toolbar: {
@@ -545,9 +522,11 @@ const base = import.meta.env.BASE_URL;
       on: {
         init: () => {
           document.body.classList.add('lightbox-open');
+          (window as any).lenis?.stop?.();
         },
         destroy: () => {
           document.body.classList.remove('lightbox-open');
+          (window as any).lenis?.start?.();
         },
       },
     });
@@ -592,6 +571,7 @@ const base = import.meta.env.BASE_URL;
       fancyBound = false;
     }
     document.body.classList.remove('lightbox-open');
+    (window as any).lenis?.start?.();
   }
 
   document.addEventListener('astro:page-load', init);

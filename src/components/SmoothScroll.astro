@@ -10,12 +10,8 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const EASE_ANCHOR = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-  // 图集页禁用 Lenis：超高灰度瀑布墙 + 灯箱下，Lenis 关灯箱时会重测滚动尺寸并
-  // 同步重排，是「整墙重刷/卡顿」的架构级来源。此页走浏览器原生滚动（同旧博客，丝滑）。
-  const noLenisHere = () => /\/gallery(\/|$)/.test(location.pathname);
-
   function startLenis() {
-    if (reduce.matches || noLenisHere()) return;
+    if (reduce.matches) return;
     lenis?.destroy();
     cancelAnimationFrame(raf);
     lenis = new Lenis({ lerp: 0.06 });
